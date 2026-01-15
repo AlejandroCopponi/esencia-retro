@@ -1,16 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation'; // Para navegar al terminar
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Upload, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 
 export default function CreateProductPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   
-  // Estado del formulario
   const [formData, setFormData] = useState({
     name: '',
     price: '',
@@ -19,25 +19,48 @@ export default function CreateProductPage() {
     image_url: ''
   });
 
-  // Maneja los cambios en los inputs
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Función para guardar en Supabase
+  const handleImageUpload = async (e) => {
+    try {
+      setUploadingImage(true);
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('camisetas')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('camisetas').getPublicUrl(filePath);
+      setFormData({ ...formData, image_url: data.publicUrl });
+
+    } catch (error) {
+      alert('Error subiendo imagen: ' + error.message);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    // 1. Validamos que el precio sea número
-    const priceNumber = parseFloat(formData.price);
-    if (isNaN(priceNumber)) {
-        alert("El precio tiene que ser un número");
+    if (!formData.image_url) {
+        alert("¡Falta subir la foto!");
         setLoading(false);
         return;
     }
 
-    // 2. Insertamos en la base de datos
+    const priceNumber = parseFloat(formData.price);
+    
     const { error } = await supabase
       .from('products')
       .insert([
@@ -45,7 +68,7 @@ export default function CreateProductPage() {
             name: formData.name, 
             price: priceNumber, 
             team: formData.team, 
-            category: formData.category,
+            category: formData.category, // Ahora sí mandamos la categoría correcta
             image_url: formData.image_url 
         }
       ]);
@@ -54,8 +77,6 @@ export default function CreateProductPage() {
       alert('Error al guardar: ' + error.message);
       setLoading(false);
     } else {
-      // 3. Éxito! Volvemos al panel
-      alert('¡Camiseta creada con éxito!');
       router.push('/admin');
     }
   };
@@ -73,71 +94,61 @@ export default function CreateProductPage() {
           
           <form onSubmit={handleSubmit} className="space-y-6">
             
-            {/* Nombre */}
+            {/* IMAGEN */}
             <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Nombre del Producto</label>
-                <input 
-                    type="text" 
-                    name="name"
-                    required
-                    placeholder="Ej: Manchester United 2008"
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none"
+                <label className="block text-sm font-bold text-gray-700 mb-2">Foto</label>
+                <div className="flex items-center gap-4">
+                    <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-lg flex items-center border border-gray-300 transition-colors">
+                        <Upload size={20} className="mr-2" />
+                        {uploadingImage ? 'Subiendo...' : 'Elegir Archivo'}
+                        <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploadingImage} className="hidden" />
+                    </label>
+                    {formData.image_url && (
+                        <div className="relative h-20 w-20 rounded-lg overflow-hidden border border-gray-200">
+                            <img src={formData.image_url} className="h-full w-full object-cover" />
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* NOMBRE */}
+            <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Nombre del Producto (Título)</label>
+                <input type="text" name="name" required placeholder="Ej: Real Madrid 2017 Final Cardiff" className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none" onChange={handleChange} />
+                <p className="text-xs text-gray-500 mt-1">Sé descriptivo, esto ayuda al buscador.</p>
+            </div>
+
+            {/* CATEGORÍA - NUEVO CAMPO IMPORTANTE */}
+            <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Categoría (Para los filtros)</label>
+                <select 
+                    name="category" 
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none bg-white"
                     onChange={handleChange}
-                />
+                    value={formData.category}
+                >
+                    <option value="Nacional">🇦🇷 Liga Argentina (Nacional)</option>
+                    <option value="Internacional">🌍 Clubes Internacionales</option>
+                    <option value="Selecciones">🏆 Selecciones</option>
+                    <option value="Retro">⏳ Retro / Otros</option>
+                </select>
             </div>
 
             <div className="grid grid-cols-2 gap-6">
-                {/* Equipo */}
+                {/* EQUIPO */}
                 <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Equipo</label>
-                    <input 
-                        type="text" 
-                        name="team"
-                        required
-                        placeholder="Ej: Manchester Utd"
-                        className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none"
-                        onChange={handleChange}
-                    />
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Equipo (Corto)</label>
+                    <input type="text" name="team" required placeholder="Ej: Real Madrid" className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none" onChange={handleChange} />
                 </div>
-                {/* Precio */}
+                {/* PRECIO */}
                 <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">Precio</label>
-                    <input 
-                        type="number" 
-                        name="price"
-                        required
-                        placeholder="Ej: 95000"
-                        className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none"
-                        onChange={handleChange}
-                    />
+                    <input type="number" name="price" required placeholder="Ej: 95000" className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none" onChange={handleChange} />
                 </div>
             </div>
 
-            {/* URL de Imagen (Temporal) */}
-            <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">URL de la Foto</label>
-                <input 
-                    type="text" 
-                    name="image_url"
-                    required
-                    placeholder="https://..."
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono"
-                    onChange={handleChange}
-                />
-                <p className="text-xs text-gray-500 mt-2">Por ahora pegá un link de Google Imágenes. Después configuramos la subida de archivos real.</p>
-            </div>
-
-            {/* Botón Guardar */}
-            <button 
-                type="submit" 
-                disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition-all flex justify-center items-center"
-            >
-                {loading ? 'Guardando...' : (
-                    <>
-                        <Save size={20} className="mr-2" /> Guardar Producto
-                    </>
-                )}
+            <button type="submit" disabled={loading || uploadingImage} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition-all flex justify-center items-center">
+                {loading ? 'Guardando...' : (<><Save size={20} className="mr-2" /> Guardar Producto</>)}
             </button>
 
           </form>
