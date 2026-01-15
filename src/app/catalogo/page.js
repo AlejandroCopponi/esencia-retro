@@ -1,83 +1,127 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { Search, Filter } from 'lucide-react';
 import Link from 'next/link';
-import { Filter } from 'lucide-react';
-import { supabase } from '@/lib/supabase'; // Importamos el conector
 
-export default function CatalogPage() {
-  const [products, setProducts] = useState([]); // Estado para guardar los productos
-  const [loading, setLoading] = useState(true); // Estado de carga
+export default function CatalogoPage() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  // ESTADOS PARA LOS FILTROS
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('Todos');
 
-  // Esta función corre apenas entras a la página
   useEffect(() => {
     async function fetchProducts() {
-      // 1. Pedimos todo a Supabase
-      const { data, error } = await supabase
-        .from('products')
-        .select('*');
-      
-      if (error) {
-        console.error('Error bajando productos:', error);
-      } else {
-        setProducts(data); // 2. Guardamos los datos reales
-      }
+      // Traemos TODO de la base de datos
+      const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+      if (data) setProducts(data);
       setLoading(false);
     }
-
     fetchProducts();
   }, []);
 
+  // LÓGICA DE FILTRADO (El Cerebro)
+  const filteredProducts = products.filter((product) => {
+    // 1. Filtro por Categoría
+    const categoryMatch = selectedCategory === 'Todos' || product.category === selectedCategory;
+    
+    // 2. Filtro por Buscador (busca en nombre o en equipo)
+    const searchMatch = 
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        product.team.toLowerCase().includes(searchTerm.toLowerCase());
+
+    return categoryMatch && searchMatch;
+  });
+
+  // Lista de botones para los filtros
+  const categories = ["Todos", "Nacional", "Internacional", "Selecciones", "Retro"];
+
   return (
     <div className="min-h-screen bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        <div className="flex items-baseline justify-between border-b border-gray-200 pb-6">
-          <h1 className="text-4xl font-black text-gray-900">Catálogo Real (BD)</h1>
-        </div>
-
-        <div className="pt-6 pb-24 lg:grid lg:grid-cols-4 lg:gap-x-8">
-          
-          {/* FILTROS (Visuales por ahora) */}
-          <aside className="hidden lg:block">
-            <div className="border-b border-gray-200 py-6">
-              <h3 className="font-bold text-gray-900 mb-4">Equipos</h3>
-              <p className="text-sm text-gray-500">Pronto activaremos los filtros...</p>
+      
+      {/* HEADER DEL CATÁLOGO */}
+      <div className="bg-gray-50 border-b border-gray-100 py-12 px-4">
+        <div className="max-w-7xl mx-auto text-center">
+            <h1 className="text-4xl font-black text-gray-900 mb-4 tracking-tight">Nuestra Colección</h1>
+            <p className="text-gray-500 max-w-2xl mx-auto">
+                Explorá las camisetas más icónicas de la historia. Calidad premium y detalles únicos.
+            </p>
+            
+            {/* BUSCADOR */}
+            <div className="mt-8 max-w-md mx-auto relative">
+                <Search className="absolute left-4 top-3.5 text-gray-400" size={20} />
+                <input 
+                    type="text" 
+                    placeholder="Buscar equipo, jugador o año..." 
+                    className="w-full pl-12 pr-4 py-3 rounded-full border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
             </div>
-          </aside>
-
-          {/* GRILLA DE PRODUCTOS */}
-          <div className="lg:col-span-3">
-             
-             {/* Mostramos "Cargando..." mientras baja la data */}
-             {loading && (
-               <div className="text-center py-20">
-                 <p className="text-xl text-gray-400 animate-pulse">Buscando camisetas en la base de datos...</p>
-               </div>
-             )}
-
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {products.map((product) => (
-                    <Link key={product.id} href={`/producto/${product.id}`} className="group">
-                        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-300">
-                            <div className="aspect-[4/5] bg-gray-100 relative overflow-hidden">
-                                <img 
-                                    src={product.image_url} 
-                                    alt={product.name}
-                                    className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-500"
-                                />
-                            </div>
-                            <div className="p-4">
-                                <h3 className="font-bold text-gray-900 text-base mb-1">{product.name}</h3>
-                                <p className="text-blue-600 font-bold text-lg">${product.price.toLocaleString('es-AR')}</p>
-                            </div>
-                        </div>
-                    </Link>
-                ))}
-             </div>
-          </div>
-
         </div>
+      </div>
+
+      {/* FILTROS DE CATEGORÍA */}
+      <div className="border-b border-gray-100 sticky top-16 bg-white/95 backdrop-blur z-40">
+        <div className="max-w-7xl mx-auto px-4 overflow-x-auto">
+            <div className="flex space-x-2 py-4 md:justify-center min-w-max">
+                {categories.map((cat) => (
+                    <button 
+                        key={cat}
+                        onClick={() => setSelectedCategory(cat)}
+                        className={`px-5 py-2 rounded-full text-sm font-bold transition-all ${
+                            selectedCategory === cat 
+                            ? 'bg-black text-white shadow-md' 
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                    >
+                        {cat}
+                    </button>
+                ))}
+            </div>
+        </div>
+      </div>
+
+      {/* GRILLA DE PRODUCTOS */}
+      <div className="max-w-7xl mx-auto px-4 py-12">
+        {loading ? (
+            <div className="text-center py-20 text-gray-400">Cargando camisetas...</div>
+        ) : filteredProducts.length === 0 ? (
+            <div className="text-center py-20">
+                <p className="text-xl font-bold text-gray-400">No encontramos nada con esa búsqueda 😢</p>
+                <button 
+                    onClick={() => {setSearchTerm(''); setSelectedCategory('Todos');}}
+                    className="mt-4 text-blue-600 font-bold hover:underline"
+                >
+                    Ver todas las camisetas
+                </button>
+            </div>
+        ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
+            {filteredProducts.map((product) => (
+                <Link key={product.id} href={`/producto/${product.id}`} className="group">
+                <div className="bg-gray-50 rounded-2xl overflow-hidden aspect-square relative mb-4">
+                    <img 
+                        src={product.image_url} 
+                        alt={product.name}
+                        className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
+                    />
+                    {/* Etiqueta de Categoría Flotante */}
+                    <span className="absolute bottom-3 left-3 bg-white/90 backdrop-blur px-2 py-1 text-xs font-bold rounded text-gray-800">
+                        {product.team}
+                    </span>
+                </div>
+                <h3 className="font-bold text-gray-900 text-lg leading-tight mb-1 group-hover:text-blue-600 transition-colors">
+                    {product.name}
+                </h3>
+                <p className="text-gray-500 font-medium">${product.price.toLocaleString('es-AR')}</p>
+                </Link>
+            ))}
+            </div>
+        )}
       </div>
     </div>
   );
