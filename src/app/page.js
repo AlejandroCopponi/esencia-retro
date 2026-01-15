@@ -1,121 +1,127 @@
-import Link from "next/link";
-import { ArrowRight, Star, Truck, ShieldCheck } from "lucide-react";
+'use client';
 
-export default function Home() {
-  // DATOS DE PRUEBA (MOCK DATA)
-  // Esto es solo para diseñar. Después vendrán de tu base de datos real.
-  const featuredProducts = [
-    { id: 1, name: "Napoli 1987 (Maradona)", price: "$85.000", img: "https://placehold.co/400x400/1e3a8a/white?text=Napoli+87" },
-    { id: 2, name: "Argentina 1994 (Visitante)", price: "$92.000", img: "https://placehold.co/400x400/102C57/white?text=Arg+94" },
-    { id: 3, name: "Boca 2000 (Intercontinental)", price: "$88.000", img: "https://placehold.co/400x400/003366/yellow?text=Boca+2000" },
-    { id: 4, name: "River 1996 (Libertadores)", price: "$88.000", img: "https://placehold.co/400x400/white/red?text=River+96" },
-  ];
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import Link from 'next/link';
+import { ArrowRight, Truck, ShieldCheck, Star } from 'lucide-react';
+
+export default function HomePage() {
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchFeatured() {
+      // Traemos solo las últimas 4 camisetas agregadas
+      const { data } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(4);
+      
+      if (data) setFeaturedProducts(data);
+      setLoading(false);
+    }
+    fetchFeatured();
+  }, []);
 
   return (
-    <main className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white">
       
-      {/* 1. HERO SECTION (El Banner Principal con imagen de fondo) */}
-      <section className="relative h-[85vh] flex items-center justify-center bg-blue-900 text-white overflow-hidden">
-        {/* Capa oscura para que se lea el texto */}
-        <div className="absolute inset-0 bg-black/50 z-10" />
+      {/* 1. HERO SECTION (La Portada) */}
+      <section className="relative bg-blue-900 text-white py-20 md:py-32 px-4 overflow-hidden">
+        {/* Fondo decorativo abstracto */}
+        <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
         
-        {/* Imagen de fondo (Usamos una foto genérica de fútbol por ahora) */}
-        <div 
-            className="absolute inset-0 z-0 bg-cover bg-center"
-            style={{ backgroundImage: "url('https://images.unsplash.com/photo-1518091043644-c1d4457512c6?q=80&w=2000&auto=format&fit=crop')" }}
-        />
-
-        <div className="relative z-20 text-center px-4 max-w-4xl mx-auto">
-          <span className="text-yellow-400 font-bold tracking-widest text-sm md:text-base mb-2 block animate-pulse">
-            NUEVA COLECCIÓN RETRO
-          </span>
-          <h1 className="text-5xl md:text-7xl font-black mb-6 tracking-tight leading-tight">
-            LA HISTORIA <br/> EN TU PIEL
-          </h1>
-          <p className="text-lg md:text-2xl mb-8 text-gray-200 max-w-2xl mx-auto">
-            Camisetas que reviven los momentos más gloriosos. Calidad premium, detalles de época y entrega inmediata.
-          </p>
-          <Link 
-            href="/catalogo" 
-            className="inline-flex items-center bg-white text-blue-900 font-bold py-4 px-8 rounded-full hover:bg-gray-100 transition-transform hover:scale-105"
-          >
-            Ver Camisetas <ArrowRight className="ml-2" />
-          </Link>
+        <div className="max-w-6xl mx-auto relative z-10 text-center">
+            <h1 className="text-5xl md:text-7xl font-black mb-6 tracking-tighter leading-tight">
+                LA HISTORIA <br/>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">
+                    EN TU PIEL
+                </span>
+            </h1>
+            <p className="text-xl md:text-2xl text-blue-100 max-w-2xl mx-auto mb-10 font-medium">
+                Las camisetas más icónicas del fútbol mundial. Calidad premium, detalles de época y la mística de siempre.
+            </p>
+            <Link 
+                href="/catalogo" 
+                className="inline-flex items-center bg-white text-blue-900 font-black py-4 px-8 rounded-full text-lg hover:bg-blue-50 transition-all transform hover:scale-105 shadow-xl"
+            >
+                Ver Colección Completa <ArrowRight className="ml-2" />
+            </Link>
         </div>
       </section>
 
-      {/* 2. BARRA DE CONFIANZA (Iconos) */}
-      <section className="py-10 bg-gray-50 border-b border-gray-100">
+      {/* 2. SECCIÓN DE BENEFICIOS */}
+      <section className="bg-gray-50 py-12 border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            <div className="flex flex-col items-center p-4">
-                <Truck className="w-10 h-10 text-blue-600 mb-3" />
-                <h3 className="font-bold text-gray-900 text-lg">Envíos a todo el país</h3>
-                <p className="text-gray-500">Llegamos a cada rincón de Argentina</p>
+            <div className="flex flex-col items-center">
+                <div className="bg-white p-4 rounded-full shadow-sm mb-4 text-blue-600">
+                    <Truck size={32} />
+                </div>
+                <h3 className="font-bold text-lg mb-2">Envíos a todo el País</h3>
+                <p className="text-gray-500 text-sm">Llegamos a cada rincón de Argentina con Andreani.</p>
             </div>
-            <div className="flex flex-col items-center p-4">
-                <ShieldCheck className="w-10 h-10 text-blue-600 mb-3" />
-                <h3 className="font-bold text-gray-900 text-lg">Compra Segura</h3>
-                <p className="text-gray-500">Pagá con MP o Transferencia (-10%)</p>
+            <div className="flex flex-col items-center">
+                <div className="bg-white p-4 rounded-full shadow-sm mb-4 text-blue-600">
+                    <ShieldCheck size={32} />
+                </div>
+                <h3 className="font-bold text-lg mb-2">Compra Segura</h3>
+                <p className="text-gray-500 text-sm">Tus datos protegidos y garantía de satisfacción.</p>
             </div>
-            <div className="flex flex-col items-center p-4">
-                <Star className="w-10 h-10 text-blue-600 mb-3" />
-                <h3 className="font-bold text-gray-900 text-lg">Calidad Premium</h3>
-                <p className="text-gray-500">Bordados y telas idénticas a la época</p>
+            <div className="flex flex-col items-center">
+                <div className="bg-white p-4 rounded-full shadow-sm mb-4 text-blue-600">
+                    <Star size={32} />
+                </div>
+                <h3 className="font-bold text-lg mb-2">Calidad Premium</h3>
+                <p className="text-gray-500 text-sm">Detalles bordados y telas fieles a la época.</p>
             </div>
         </div>
       </section>
 
-      {/* 3. PRODUCTOS DESTACADOS (La Vidriera) */}
-      <section className="py-20 max-w-7xl mx-auto px-4">
-        <div className="flex justify-between items-end mb-10">
+      {/* 3. ÚLTIMOS INGRESOS (Automático) */}
+      <section className="py-20 px-4 max-w-7xl mx-auto">
+        <div className="flex justify-between items-end mb-12">
             <div>
-              <h2 className="text-3xl font-black text-gray-900">Recién Llegadas</h2>
-              <p className="text-gray-500 mt-2">Las joyas que acaban de entrar al stock.</p>
+                <h2 className="text-3xl font-black text-gray-900 mb-2">Recién Llegadas</h2>
+                <div className="h-1 w-20 bg-blue-600 rounded"></div>
             </div>
-            <Link href="/catalogo" className="hidden md:flex items-center text-blue-600 font-bold hover:underline">
-                Ver todo el catálogo <ArrowRight size={16} className="ml-1" />
+            <Link href="/catalogo" className="hidden md:block text-blue-600 font-bold hover:underline">
+                Ver todo el catálogo
             </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {featuredProducts.map((product) => (
-                <Link key={product.id} href={`/producto/${product.id}`} className="group">
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300">
-                        <div className="relative aspect-[4/5] bg-gray-100 overflow-hidden">
-                            {/* Etiqueta de Nuevo */}
-                            <span className="absolute top-3 left-3 bg-black text-white text-xs font-bold px-2 py-1 rounded z-10">
-                              NUEVO
-                            </span>
-                            {/* Imagen del producto */}
+        {loading ? (
+            <div className="text-center py-10">Cargando novedades...</div>
+        ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
+                {featuredProducts.map((product) => (
+                    <Link key={product.id} href={`/producto/${product.id}`} className="group block">
+                        <div className="bg-gray-100 rounded-xl overflow-hidden aspect-[4/5] relative mb-3 flex items-center justify-center p-4">
                             <img 
-                                src={product.img} 
+                                src={product.image_url} 
                                 alt={product.name}
-                                className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-500"
+                                className="object-contain w-full h-full group-hover:scale-110 transition-transform duration-500 mix-blend-multiply"
                             />
-                            {/* Botón flotante al hacer hover */}
-                            <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
-                              <button className="w-full bg-white text-black font-bold py-3 rounded-xl shadow-lg hover:bg-gray-50">
-                                Ver Detalle
-                              </button>
-                            </div>
+                            <span className="absolute top-2 right-2 bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded">
+                                NUEVO
+                            </span>
                         </div>
-                        <div className="p-5">
-                            <h3 className="font-bold text-gray-900 text-lg leading-tight mb-1">{product.name}</h3>
-                            <p className="text-blue-600 font-bold text-xl">{product.price}</p>
-                        </div>
-                    </div>
-                </Link>
-            ))}
-        </div>
+                        <h3 className="font-bold text-gray-900 text-sm md:text-base leading-tight mb-1 truncate">
+                            {product.name}
+                        </h3>
+                        <p className="text-gray-600 font-medium">${product.price.toLocaleString('es-AR')}</p>
+                    </Link>
+                ))}
+            </div>
+        )}
         
-        {/* Botón ver más para móviles */}
-        <div className="mt-8 md:hidden text-center">
-            <Link href="/catalogo" className="inline-block bg-gray-100 text-gray-900 font-bold py-3 px-8 rounded-full">
+        <div className="mt-8 text-center md:hidden">
+            <Link href="/catalogo" className="text-blue-600 font-bold border border-blue-600 px-6 py-3 rounded-full inline-block w-full">
                 Ver todo el catálogo
             </Link>
         </div>
       </section>
 
-    </main>
+    </div>
   );
 }

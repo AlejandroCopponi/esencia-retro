@@ -85,7 +85,7 @@ export default function CatalogoPage() {
         </div>
       </div>
 
-      {/* GRILLA DE PRODUCTOS */}
+      {/* GRILLA DE PRODUCTOS (DISEÑO NUEVO) */}
       <div className="max-w-7xl mx-auto px-4 py-12">
         {loading ? (
             <div className="text-center py-20 text-gray-400">Cargando camisetas...</div>
@@ -100,24 +100,29 @@ export default function CatalogoPage() {
                 </button>
             </div>
         ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8">
             {filteredProducts.map((product) => (
-                <Link key={product.id} href={`/producto/${product.id}`} className="group">
-                <div className="bg-gray-50 rounded-2xl overflow-hidden aspect-square relative mb-4">
+                <Link key={product.id} href={`/producto/${product.id}`} className="group block">
+                
+                {/* CAJA DE FOTO: Vertical (4/5) + Padding (p-4) + Contain */}
+                <div className="bg-gray-100 rounded-xl overflow-hidden aspect-[4/5] relative mb-3 flex items-center justify-center p-4">
                     <img 
                         src={product.image_url} 
                         alt={product.name}
-                        className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
+                        className="object-contain w-full h-full group-hover:scale-110 transition-transform duration-500 mix-blend-multiply"
                     />
-                    {/* Etiqueta de Categoría Flotante */}
-                    <span className="absolute bottom-3 left-3 bg-white/90 backdrop-blur px-2 py-1 text-xs font-bold rounded text-gray-800">
+                    
+                    {/* Etiqueta pequeña */}
+                    <span className="absolute bottom-2 left-2 bg-white/90 backdrop-blur px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded text-gray-800 border border-gray-200 shadow-sm">
                         {product.team}
                     </span>
                 </div>
-                <h3 className="font-bold text-gray-900 text-lg leading-tight mb-1 group-hover:text-blue-600 transition-colors">
+
+                {/* Textos */}
+                <h3 className="font-bold text-gray-900 text-sm md:text-base leading-tight mb-1 group-hover:text-blue-600 transition-colors truncate">
                     {product.name}
                 </h3>
-                <p className="text-gray-500 font-medium">${product.price.toLocaleString('es-AR')}</p>
+                <p className="text-gray-600 text-sm font-medium">${product.price.toLocaleString('es-AR')}</p>
                 </Link>
             ))}
             </div>
