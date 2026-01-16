@@ -1,3 +1,21 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+body {
+  background-color: theme('colors.retro-base'); /* Se pinta todo con el nuevo #F5F2EB */
+  color: theme('colors.retro-main');
+  overflow-x: hidden;
+}
+
+@keyframes scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); } 
+}
+
+.animate-marquee {
+  display: flex;
+  white-space: nowrap;
+  animation: scroll 30s linear infinite;
+  min-width: 200%;
+}

@@ -6,7 +6,16 @@ module.exports = {
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        'retro-base': '#F5F2EB',   // <--- COLOR NUEVO: Crema muy suave (casi blanco hueso)
+        'retro-main': '#111111',   // Negro
+        'retro-accent': '#C5A059', // Dorado
+      },
+      fontFamily: {
+        sans: ['var(--font-inter)', 'sans-serif'],
+      },
+    },
   },
   plugins: [],
 };
