@@ -5,54 +5,71 @@ import { createContext, useContext, useState, useEffect } from 'react';
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
+  // Inicializamos el carrito buscando en localStorage si existe (para no perderlo al F5)
   const [cart, setCart] = useState([]);
+  const [totalPrice, setTotalPrice] = useState(0);
 
-  // Cargar carrito guardado en el navegador (si existe) al iniciar
+  // 1. CARGAR CARRITO GUARDADO AL INICIAR
   useEffect(() => {
-    const savedCart = localStorage.getItem('esencia-cart');
-    if (savedCart) {
-      setCart(JSON.parse(savedCart));
+    try {
+      const savedCart = localStorage.getItem('retroCart');
+      if (savedCart) {
+        setCart(JSON.parse(savedCart));
+      }
+    } catch (error) {
+      console.error("Error cargando carrito:", error);
     }
   }, []);
 
-  // Guardar en el navegador cada vez que cambia el carrito
+  // 2. CADA VEZ QUE CAMBIA EL CARRITO, GUARDAMOS Y RECALCULAMOS TOTAL
   useEffect(() => {
-    localStorage.setItem('esencia-cart', JSON.stringify(cart));
+    // Guardar en navegador
+    localStorage.setItem('retroCart', JSON.stringify(cart));
+
+    // Calcular Total (Asegurando que sean números)
+    const total = cart.reduce((acc, item) => {
+      const price = Number(item.price) || 0; // Convertimos a numero por seguridad
+      const quantity = Number(item.quantity) || 1;
+      return acc + (price * quantity);
+    }, 0);
+    
+    setTotalPrice(total);
   }, [cart]);
 
-  // Función: Agregar producto
-  const addToCart = (product, size, quantity) => {
-    // Chequear si ya existe ese producto con ese talle
-    const existingItem = cart.find((item) => item.id === product.id && item.size === size);
-
-    if (existingItem) {
-      // Si ya está, solo sumamos la cantidad
-      setCart(cart.map((item) => 
-        item.id === product.id && item.size === size 
-        ? { ...item, quantity: item.quantity + quantity }
-        : item
-      ));
-    } else {
-      // Si no está, lo agregamos nuevo
-      setCart([...cart, { ...product, size, quantity }]);
-    }
-    alert("¡Agregado al carrito!");
+  // AGREGAR AL CARRITO
+  const addToCart = (product) => {
+    setCart((prev) => {
+      // Si ya existe, sumamos cantidad
+      const existing = prev.find((item) => item.id === product.id);
+      if (existing) {
+        return prev.map((item) =>
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
+      }
+      // Si es nuevo, lo agregamos con precio numérico asegurado
+      return [...prev, { ...product, quantity: 1, price: Number(product.price) }];
+    });
   };
 
-  // Función: Eliminar producto
-  const removeFromCart = (id, size) => {
-    setCart(cart.filter((item) => !(item.id === id && item.size === size)));
+  // SACAR DEL CARRITO
+  const removeFromCart = (id) => {
+    setCart((prev) => prev.filter((item) => item.id !== id));
   };
 
-  // Calcular total
-  const cartTotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  // LIMPIAR CARRITO
+  const clearCart = () => {
+    setCart([]);
+    setTotalPrice(0);
+    localStorage.removeItem('retroCart');
+  };
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, cartTotal }}>
+    <CartContext.Provider value={{ cart, addToCart, removeFromCart, clearCart, totalPrice }}>
       {children}
     </CartContext.Provider>
   );
 }
 
-// Hook para usar el carrito fácil
 export const useCart = () => useContext(CartContext);
