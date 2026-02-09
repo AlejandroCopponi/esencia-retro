@@ -8,12 +8,16 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        'retro-base': '#F5F2EB',   // <--- COLOR NUEVO: Crema muy suave (casi blanco hueso)
-        'retro-main': '#111111',   // Negro
-        'retro-accent': '#C5A059', // Dorado
+        // PALETA EXACTA EXTRAÍDA DEL HTML
+        'retro-base': '#efe3cf',   // Crema principal
+        'retro-base2': '#f3ead7',  // Crema secundario (más claro)
+        'retro-ink': '#0f0f10',    // Negro tinta (texto)
+        'retro-gold': '#c6a35a',   // Dorado
+        'retro-muted': '#6f6f73',  // Gris suave para textos secundarios
+        'retro-line': 'rgba(15,15,16,0.10)', // Líneas sutiles
       },
       fontFamily: {
-        sans: ['var(--font-inter)', 'sans-serif'],
+        sans: ['system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Arial', 'sans-serif'],
       },
     },
   },
