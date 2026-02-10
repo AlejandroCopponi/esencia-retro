@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ShoppingCart, Menu, X, Search, User, ChevronDown } from "lucide-react";
 import { useCart } from "@/context/CartContext";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation"; // 1. Agregamos usePathname
 
 export default function Navbar() {
   const { cart } = useCart();
@@ -12,7 +12,9 @@ export default function Navbar() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isFixed, setIsFixed] = useState(false);
   const router = useRouter();
+  const pathname = usePathname(); // 2. Leemos la ruta
 
+  // --- HOOKS (ESTO NO SE TOCA Y DEBE ESTAR ARRIBA) ---
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 40) setIsFixed(true);
@@ -29,6 +31,13 @@ export default function Navbar() {
     }
   };
 
+  // --- LÓGICA DE OCULTAMIENTO (AHORA SÍ, EN EL LUGAR CORRECTO) ---
+  // Recién ahora, que ya cargaron los hooks, preguntamos si hay que ocultar.
+  if (pathname && (pathname.startsWith('/admin') || pathname.startsWith('/checkout'))) {
+    return null;
+  }
+  // -------------------------------------------------------------
+
   // DEFINIMOS EL TEXTO DE LA MARQUESINA UNA VEZ
   const marqueeText = (
     <div className="flex items-center gap-12 px-6">
@@ -44,11 +53,9 @@ export default function Navbar() {
   return (
     <div className="w-full font-sans relative z-50">
       
-      {/* 1. MARQUESINA INFINITA (SOLUCIÓN DEFINITIVA) */}
+      {/* 1. MARQUESINA INFINITA */}
       <div className="bg-retro-base text-retro-ink text-[10px] md:text-xs font-bold py-2 overflow-hidden border-b border-retro-line relative z-50">
-        {/* Usamos w-max para que el div sea tan ancho como su contenido y flex-nowrap */}
         <div className="animate-marquee flex whitespace-nowrap w-max">
-            {/* Repetimos el bloque 4 veces para asegurar el loop infinito perfecto */}
             {marqueeText}
             {marqueeText}
             {marqueeText}
@@ -104,7 +111,7 @@ export default function Navbar() {
             </div>
         </div>
 
-        {/* 3. BARRA DE NAVEGACIÓN (TEXTO AGRANDADO A text-sm / 14px) */}
+        {/* 3. BARRA DE NAVEGACIÓN */}
         <div className="hidden md:block bg-[#111111] text-white border-t border-white/10 relative">
             <div className="max-w-7xl mx-auto px-4 flex justify-center items-center h-[50px]">
                 
