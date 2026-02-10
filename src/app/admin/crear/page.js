@@ -1,51 +1,30 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Save, Upload, Image as ImageIcon } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Upload, ArrowLeft, Save } from 'lucide-react';
 import Link from 'next/link';
 
-export default function CreateProductPage() {
+export default function CrearProducto() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  
+  const [imageFile, setImageFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+
   const [formData, setFormData] = useState({
     name: '',
     price: '',
     team: '',
-    category: 'Nacional', // Valor por defecto
-    image_url: ''
+    category: 'nacional', // Valor por defecto
+    description: ''
   });
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleImageUpload = async (e) => {
-    try {
-      setUploadingImage(true);
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('camisetas')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage.from('camisetas').getPublicUrl(filePath);
-      setFormData({ ...formData, image_url: data.publicUrl });
-
-    } catch (error) {
-      alert('Error subiendo imagen: ' + error.message);
-    } finally {
-      setUploadingImage(false);
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      setPreview(URL.createObjectURL(file));
     }
   };
 
@@ -53,106 +32,153 @@ export default function CreateProductPage() {
     e.preventDefault();
     setLoading(true);
 
-    if (!formData.image_url) {
-        alert("¡Falta subir la foto!");
-        setLoading(false);
-        return;
-    }
+    try {
+      let image_url = null;
 
-    const priceNumber = parseFloat(formData.price);
-    
-    const { error } = await supabase
-      .from('products')
-      .insert([
-        { 
-            name: formData.name, 
-            price: priceNumber, 
-            team: formData.team, 
-            category: formData.category, // Ahora sí mandamos la categoría correcta
-            image_url: formData.image_url 
-        }
-      ]);
+      // 1. Subir imagen a Supabase Storage
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('camisetas')
+          .upload(fileName, imageFile);
 
-    if (error) {
-      alert('Error al guardar: ' + error.message);
+        if (uploadError) throw uploadError;
+
+        // Obtener URL pública
+        const { data } = supabase.storage
+          .from('camisetas')
+          .getPublicUrl(fileName);
+        
+        image_url = data.publicUrl;
+      }
+
+      // 2. Guardar producto en Base de Datos (CON CATEGORÍA)
+      const { error: insertError } = await supabase
+        .from('products')
+        .insert({
+          name: formData.name,
+          price: Number(formData.price),
+          team: formData.team,
+          category: formData.category, // <--- ACÁ ESTÁ LA CLAVE
+          image_url: image_url,
+          created_at: new Date()
+        });
+
+      if (insertError) throw insertError;
+
+      alert('¡Camiseta cargada con éxito!');
+      router.push('/admin'); // Volver al panel
+
+    } catch (error) {
+      alert('Error: ' + error.message);
+    } finally {
       setLoading(false);
-    } else {
-      router.push('/admin');
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8 font-sans">
+      <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         
-        <Link href="/admin" className="text-gray-500 hover:text-black mb-6 inline-flex items-center font-bold">
-            <ArrowLeft size={20} className="mr-2" /> Volver al Panel
-        </Link>
+        <div className="p-6 border-b border-gray-100 flex items-center gap-4">
+            <Link href="/admin" className="text-gray-400 hover:text-gray-600">
+                <ArrowLeft size={24} />
+            </Link>
+            <h1 className="text-xl font-black uppercase text-gray-800">Nueva Camiseta</h1>
+        </div>
 
-        <div className="bg-white rounded-xl shadow border border-gray-200 p-8">
-          <h1 className="text-2xl font-black text-gray-900 mb-6">Cargar Nueva Camiseta</h1>
-          
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
             
+            {/* NOMBRE */}
+            <div>
+                <label className="block text-xs font-bold uppercase text-gray-500 mb-1">Nombre del Producto</label>
+                <input 
+                    type="text" 
+                    required
+                    placeholder="Ej: Boca Juniors 2000 Riquelme"
+                    className="w-full border border-gray-200 rounded-lg p-3 focus:outline-none focus:border-blue-500 font-bold text-gray-800"
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                {/* PRECIO */}
+                <div>
+                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1">Precio ($)</label>
+                    <input 
+                        type="number" 
+                        required
+                        placeholder="Ej: 45000"
+                        className="w-full border border-gray-200 rounded-lg p-3 focus:outline-none focus:border-blue-500 font-bold text-gray-800"
+                        value={formData.price}
+                        onChange={(e) => setFormData({...formData, price: e.target.value})}
+                    />
+                </div>
+                
+                {/* EQUIPO */}
+                <div>
+                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1">Equipo / Club</label>
+                    <input 
+                        type="text" 
+                        required
+                        placeholder="Ej: Boca Juniors"
+                        className="w-full border border-gray-200 rounded-lg p-3 focus:outline-none focus:border-blue-500 font-bold text-gray-800"
+                        value={formData.team}
+                        onChange={(e) => setFormData({...formData, team: e.target.value})}
+                    />
+                </div>
+            </div>
+
+            {/* CATEGORÍA (NUEVO CAMPO FUNDAMENTAL) */}
+            <div>
+                <label className="block text-xs font-bold uppercase text-gray-500 mb-1">Categoría</label>
+                <select 
+                    className="w-full border border-gray-200 rounded-lg p-3 focus:outline-none focus:border-blue-500 font-bold text-gray-800 bg-white"
+                    value={formData.category}
+                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                >
+                    <option value="nacional">Clubes Nacionales</option>
+                    <option value="internacional">Clubes Internacionales</option>
+                    <option value="selecciones">Selecciones</option>
+                    <option value="retro">Leyendas / Retro</option>
+                </select>
+                <p className="text-xs text-gray-400 mt-1">Esto define dónde aparece en el catálogo.</p>
+            </div>
+
             {/* IMAGEN */}
             <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Foto</label>
-                <div className="flex items-center gap-4">
-                    <label className="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-lg flex items-center border border-gray-300 transition-colors">
-                        <Upload size={20} className="mr-2" />
-                        {uploadingImage ? 'Subiendo...' : 'Elegir Archivo'}
-                        <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploadingImage} className="hidden" />
-                    </label>
-                    {formData.image_url && (
-                        <div className="relative h-20 w-20 rounded-lg overflow-hidden border border-gray-200">
-                            <img src={formData.image_url} className="h-full w-full object-cover" />
+                <label className="block text-xs font-bold uppercase text-gray-500 mb-1">Foto del Producto</label>
+                <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:bg-gray-50 transition-colors relative">
+                    <input 
+                        type="file" 
+                        accept="image/*"
+                        required
+                        onChange={handleImageChange}
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    />
+                    {preview ? (
+                        <img src={preview} className="h-40 mx-auto object-contain mix-blend-multiply" />
+                    ) : (
+                        <div className="text-gray-400 flex flex-col items-center">
+                            <Upload size={32} className="mb-2" />
+                            <span className="text-sm font-bold">Hacé clic para subir foto</span>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* NOMBRE */}
-            <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Nombre del Producto (Título)</label>
-                <input type="text" name="name" required placeholder="Ej: Real Madrid 2017 Final Cardiff" className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none" onChange={handleChange} />
-                <p className="text-xs text-gray-500 mt-1">Sé descriptivo, esto ayuda al buscador.</p>
-            </div>
-
-            {/* CATEGORÍA - NUEVO CAMPO IMPORTANTE */}
-            <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Categoría (Para los filtros)</label>
-                <select 
-                    name="category" 
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                    onChange={handleChange}
-                    value={formData.category}
-                >
-                    <option value="Nacional">🇦🇷 Liga Argentina (Nacional)</option>
-                    <option value="Internacional">🌍 Clubes Internacionales</option>
-                    <option value="Selecciones">🏆 Selecciones</option>
-                    <option value="Retro">⏳ Retro / Otros</option>
-                </select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-6">
-                {/* EQUIPO */}
-                <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Equipo (Corto)</label>
-                    <input type="text" name="team" required placeholder="Ej: Real Madrid" className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none" onChange={handleChange} />
-                </div>
-                {/* PRECIO */}
-                <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">Precio</label>
-                    <input type="number" name="price" required placeholder="Ej: 95000" className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none" onChange={handleChange} />
-                </div>
-            </div>
-
-            <button type="submit" disabled={loading || uploadingImage} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition-all flex justify-center items-center">
-                {loading ? 'Guardando...' : (<><Save size={20} className="mr-2" /> Guardar Producto</>)}
+            {/* BOTÓN GUARDAR */}
+            <button 
+                type="submit" 
+                disabled={loading}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black uppercase py-4 rounded-xl shadow-lg transition-transform hover:-translate-y-1 flex justify-center items-center gap-2"
+            >
+                {loading ? 'Subiendo...' : <><Save size={20} /> Guardar Camiseta</>}
             </button>
 
-          </form>
-        </div>
+        </form>
       </div>
     </div>
   );
