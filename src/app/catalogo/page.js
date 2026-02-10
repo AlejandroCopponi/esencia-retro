@@ -3,10 +3,9 @@
 import { useState, useEffect, Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
-import { Search, SlidersHorizontal, X } from 'lucide-react';
+import { Search, SlidersHorizontal, X, ShoppingBag, CreditCard } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
-// Componente interno para manejar los parámetros de búsqueda sin romper el servidor
 function CatalogoContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -15,14 +14,12 @@ function CatalogoContent() {
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // ESTADOS
   const [searchTerm, setSearchTerm] = useState('');
   const initialCategory = searchParams.get('category') || 'todos';
   const [categoryFilter, setCategoryFilter] = useState(initialCategory);
   const [sortOrder, setSortOrder] = useState('newest'); 
   const [showFiltersMobile, setShowFiltersMobile] = useState(false);
 
-  // COLORES
   const COLORS = {
     gradient: 'linear-gradient(180deg, #f3ead7 0%, #efe3cf 100%)',
     ink: '#0f0f10',
@@ -34,21 +31,14 @@ function CatalogoContent() {
     fetchProducts();
   }, []);
 
-  // ESCUCHAMOS LA URL: Si cambia la URL (por el menú), cambiamos el filtro
   useEffect(() => {
     const paramCategory = searchParams.get('category');
-    if (paramCategory) {
-      setCategoryFilter(paramCategory);
-    } else {
-      setCategoryFilter('todos');
-    }
+    if (paramCategory) setCategoryFilter(paramCategory);
+    else setCategoryFilter('todos');
   }, [searchParams]);
 
-  // APLICAR FILTROS CUANDO CAMBIA ALGO
   useEffect(() => {
-    if (products.length > 0) {
-      applyFilters();
-    }
+    if (products.length > 0) applyFilters();
   }, [searchTerm, categoryFilter, sortOrder, products]);
 
   async function fetchProducts() {
@@ -57,14 +47,10 @@ function CatalogoContent() {
       .select('*')
       .order('created_at', { ascending: false });
     
-    if (data) {
-      setProducts(data);
-      // No seteamos filteredProducts acá para dejar que el useEffect de applyFilters haga su trabajo inicial
-    }
+    if (data) setProducts(data);
     setLoading(false);
   }
 
-  // LÓGICA DE FILTRADO (ACÁ ESTABA EL ERROR)
   function normalize(text) {
     if (!text) return '';
     return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -82,21 +68,15 @@ function CatalogoContent() {
       );
     }
 
-    // 2. Categoría (CORREGIDO EL BUG DE NACIONAL/INTERNACIONAL)
+    // 2. Categoría
     if (categoryFilter !== 'todos') {
       temp = temp.filter(p => {
         const productCat = normalize(p.category || ''); 
         const filterCat = normalize(categoryFilter); 
         
-        // REGLAS ESTRICTAS PARA QUE NO MEZCLE
-        if (filterCat === 'nacional') {
-            // Tiene que decir "nacional" Y NO DECIR "internacional"
-            return productCat.includes('nacional') && !productCat.includes('internacional');
-        }
-        
-        // Resto de reglas
+        if (filterCat === 'nacional') return productCat.includes('nacional') && !productCat.includes('internacional');
         if (filterCat === 'internacional') return productCat.includes('internacional');
-        if (filterCat === 'selecciones') return productCat.includes('seleccion'); // matchea "selección" y "selecciones"
+        if (filterCat === 'selecciones') return productCat.includes('seleccion'); 
         if (filterCat === 'retro') return productCat.includes('retro') || productCat.includes('leyenda');
         
         return productCat === filterCat;
@@ -122,7 +102,7 @@ function CatalogoContent() {
   };
 
   return (
-    <div className="min-h-screen font-sans pt-24 pb-12 px-4 md:px-8" style={{ background: COLORS.gradient, color: COLORS.ink }}>
+    <div className="min-h-screen font-sans pt-28 pb-12 px-4 md:px-8" style={{ background: COLORS.gradient, color: COLORS.ink }}>
       
       {/* HEADER */}
       <div className="max-w-7xl mx-auto mb-10 border-b border-[#0f0f10]/10 pb-6 flex flex-col md:flex-row justify-between items-end gap-6">
@@ -162,7 +142,6 @@ function CatalogoContent() {
                 <button onClick={() => setShowFiltersMobile(false)}><X size={24}/></button>
             </div>
 
-            {/* BUSCADOR */}
             <div className="mb-8 relative">
                 <input 
                     type="text" 
@@ -174,7 +153,6 @@ function CatalogoContent() {
                 <Search className="absolute left-3 top-3.5 text-[#6f6f73]" size={18} />
             </div>
 
-            {/* CATEGORÍAS */}
             <div className="mb-8">
                 <h3 className="font-black uppercase tracking-widest text-xs mb-4 border-b border-[#0f0f10]/10 pb-2">Categorías</h3>
                 <div className="space-y-3">
@@ -206,7 +184,6 @@ function CatalogoContent() {
         {/* GRILLA DE PRODUCTOS */}
         <div className="lg:col-span-3">
             
-            {/* BARRA MÓVIL */}
             <div className="flex lg:hidden gap-4 mb-6">
                 <button 
                     onClick={() => setShowFiltersMobile(true)}
@@ -216,48 +193,98 @@ function CatalogoContent() {
                 </button>
             </div>
 
-            {/* ESTADO DE CARGA */}
             {loading ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-6 animate-pulse">
-                    {[1,2,3,4,5,6].map(i => (
-                        <div key={i} className="h-64 bg-[#0f0f10]/5 rounded-xl"></div>
-                    ))}
+                    {[1,2,3,4,5,6].map(i => <div key={i} className="h-80 bg-[#0f0f10]/5 rounded-xl"></div>)}
                 </div>
             ) : filteredProducts.length === 0 ? (
                 <div className="text-center py-20 border border-dashed border-[#0f0f10]/20 rounded-xl">
                     <h3 className="font-black uppercase text-xl mb-2">No hay resultados</h3>
-                    <p className="text-[#6f6f73] mb-4 text-sm">No encontramos camisetas en la categoría "{categoryFilter}".</p>
-                    <button 
-                        onClick={() => {setSearchTerm(''); updateFilter('todos');}}
-                        className="text-[#c6a35a] font-bold uppercase text-xs border-b border-[#c6a35a]"
-                    >
+                    <button onClick={() => {setSearchTerm(''); updateFilter('todos');}} className="text-[#c6a35a] font-bold uppercase text-xs border-b border-[#c6a35a]">
                         Ver todo el catálogo
                     </button>
                 </div>
             ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-8 items-start">
-                    {filteredProducts.map((product) => (
-                        <Link key={product.id} href={`/producto/${product.id}`} className="group block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-transparent hover:border-[#c6a35a]">
-                            <div className="w-full relative">
-                                <img 
-                                    src={product.image_url} 
-                                    alt={product.name}
-                                    className="w-full h-auto object-contain mix-blend-multiply p-2"
-                                />
-                            </div>
-                            <div className="p-3 pt-1 border-t border-gray-100">
-                                <h3 className="font-black text-[#0f0f10] text-xs md:text-sm uppercase tracking-tight leading-tight group-hover:text-[#c6a35a] transition-colors mb-1">
-                                    {product.name}
-                                </h3>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-[10px] text-[#6f6f73] font-bold uppercase">{product.team}</span>
-                                    <span className="font-bold text-[#0f0f10] text-sm">
-                                        ${(product.price || 0).toLocaleString('es-AR')}
-                                    </span>
+                    {filteredProducts.map((product) => {
+                        // LÓGICA DE PRECIO REAL
+                        const price = Number(product.price || 0);
+                        const oldPrice = Number(product.old_price || 0);
+                        const hasDiscount = oldPrice > price;
+                        
+                        // Calculamos porcentaje real
+                        const discountPercent = hasDiscount 
+                            ? Math.round(((oldPrice - price) / oldPrice) * 100) 
+                            : 0;
+
+                        return (
+                            <Link key={product.id} href={`/producto/${product.id}`} className="group block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-transparent hover:border-[#c6a35a] relative">
+                                
+                                {/* 1. IMAGEN */}
+                                <div className="w-full relative bg-white">
+                                    <img 
+                                        src={product.image_url} 
+                                        alt={product.name}
+                                        className="w-full h-auto object-contain mix-blend-multiply p-4"
+                                    />
+                                    
+                                    {/* BADGE DE DESCUENTO REAL */}
+                                    {hasDiscount && (
+                                        <span className="absolute top-2 left-2 bg-[#c6a35a] text-[#0f0f10] text-[10px] font-black px-2 py-1 uppercase tracking-tighter rounded-sm shadow-sm z-10">
+                                            {discountPercent}% OFF
+                                        </span>
+                                    )}
+
+                                    {/* BADGE NUEVO */}
+                                    {new Date(product.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) && (
+                                        <span className="absolute top-2 right-2 bg-[#0f0f10] text-white text-[9px] font-bold px-2 py-1 uppercase tracking-widest rounded-sm z-10">
+                                            New
+                                        </span>
+                                    )}
                                 </div>
-                            </div>
-                        </Link>
-                    ))}
+                                
+                                {/* 2. INFO DEL PRODUCTO */}
+                                <div className="p-4 pt-2 border-t border-gray-100 flex flex-col gap-1">
+                                    <div className="text-[10px] text-[#6f6f73] font-bold uppercase tracking-widest">
+                                        {product.team || 'Clásico'}
+                                    </div>
+                                    
+                                    <h3 className="font-black text-[#0f0f10] text-xs md:text-sm uppercase leading-tight group-hover:text-[#c6a35a] transition-colors line-clamp-2 min-h-[2.5em]">
+                                        {product.name}
+                                    </h3>
+
+                                    {/* BLOQUE DE PRECIOS */}
+                                    <div className="mt-2">
+                                        {/* Precio Tachado (Solo si hay descuento) */}
+                                        {hasDiscount ? (
+                                            <p className="text-xs text-gray-400 font-bold line-through decoration-red-500/50">
+                                                ${oldPrice.toLocaleString('es-AR')}
+                                            </p>
+                                        ) : (
+                                            <div className="h-4"></div> // Espacio vacío para alinear
+                                        )}
+                                        
+                                        {/* Precio Nuevo Gigante */}
+                                        <div className="flex items-center gap-2">
+                                            <p className="font-black text-[#0f0f10] text-lg md:text-xl">
+                                                ${price.toLocaleString('es-AR')}
+                                            </p>
+                                        </div>
+
+                                        <div className="flex items-center gap-1 text-[10px] font-bold text-[#c6a35a] mt-1">
+                                            <CreditCard size={12} />
+                                            <span>3 cuotas sin interés</span>
+                                        </div>
+                                    </div>
+
+                                    {/* BOTÓN "LA QUIERO" */}
+                                    <button className="mt-4 w-full bg-[#0f0f10] text-white py-3 rounded-sm font-black uppercase text-xs tracking-widest hover:bg-[#c6a35a] hover:text-[#0f0f10] transition-colors flex items-center justify-center gap-2 group-hover:shadow-lg">
+                                        La Quiero <ShoppingBag size={14} />
+                                    </button>
+                                </div>
+                            </Link>
+                        );
+                    })}
                 </div>
             )}
         </div>
@@ -266,7 +293,6 @@ function CatalogoContent() {
   );
 }
 
-// WRAPPER PRINCIPAL (Esto arregla errores de build en Next.js nuevo)
 export default function CatalogoPage() {
   return (
     <Suspense fallback={<div className="min-h-screen grid place-items-center">Cargando catálogo...</div>}>

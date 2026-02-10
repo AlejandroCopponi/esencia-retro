@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Truck, ShieldCheck, Check, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, Truck, ShieldCheck, Check, ShoppingBag, CreditCard } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 
 export default function ProductPage() {
@@ -18,7 +18,6 @@ export default function ProductPage() {
   const [selectedSize, setSelectedSize] = useState(null);
   const [adding, setAdding] = useState(false);
 
-  // COLORES
   const COLORS = {
     gradient: 'linear-gradient(180deg, #f3ead7 0%, #efe3cf 100%)',
     ink: '#0f0f10',
@@ -61,17 +60,14 @@ export default function ProductPage() {
     }
   }
 
-  // ESTA ES LA FUNCIÓN QUE FALTABA
   const handleAddToCart = () => {
     if (!selectedSize) {
       alert("Por favor, seleccioná un talle.");
       return;
     }
     setAdding(true);
-    // Agregamos al carrito
     addToCart({ ...product, size: selectedSize });
     
-    // Feedback visual de "Agregado"
     setTimeout(() => {
       setAdding(false);
     }, 1500);
@@ -90,6 +86,12 @@ export default function ProductPage() {
     </div>
   );
 
+  // CÁLCULOS DE PRECIO
+  const price = Number(product.price || 0);
+  const oldPrice = Number(product.old_price || 0);
+  const hasDiscount = oldPrice > price;
+  const discountPercent = hasDiscount ? Math.round(((oldPrice - price) / oldPrice) * 100) : 0;
+
   return (
     <div className="min-h-screen font-sans pt-28 pb-12 px-4 md:px-8" style={{ background: COLORS.gradient, color: COLORS.ink }}>
       
@@ -103,13 +105,19 @@ export default function ProductPage() {
         {/* FICHA DE PRODUCTO */}
         <div className="grid md:grid-cols-2 gap-12 lg:gap-20 mb-20 items-start">
             
-            {/* COLUMNA IZQUIERDA: FOTO ADAPTABLE */}
+            {/* COLUMNA IZQUIERDA: FOTO */}
             <div className="bg-white rounded-xl shadow-sm border border-transparent hover:border-[#c6a35a] transition-all duration-500 overflow-hidden relative w-full">
                 <img 
                     src={product.image_url} 
                     alt={product.name} 
                     className="w-full h-auto object-contain mix-blend-multiply p-4 md:p-8"
                 />
+                {/* Badge Descuento */}
+                {hasDiscount && (
+                    <span className="absolute top-4 left-4 bg-[#c6a35a] text-[#0f0f10] text-sm font-black px-3 py-1 uppercase tracking-tighter rounded-sm shadow-sm z-10">
+                        {discountPercent}% OFF
+                    </span>
+                )}
             </div>
 
             {/* COLUMNA DERECHA: INFO */}
@@ -123,9 +131,21 @@ export default function ProductPage() {
                     {product.name}
                 </h1>
                 
-                <p className="text-3xl font-bold text-[#0f0f10] mb-8 font-mono">
-                    ${(product.price || 0).toLocaleString('es-AR')}
-                </p>
+                {/* PRECIOS */}
+                <div className="mb-6">
+                    {hasDiscount && (
+                        <p className="text-xl text-gray-400 font-bold line-through decoration-red-500/50 mb-1">
+                            ${oldPrice.toLocaleString('es-AR')}
+                        </p>
+                    )}
+                    <p className="text-4xl font-black text-[#0f0f10] font-mono">
+                        ${price.toLocaleString('es-AR')}
+                    </p>
+                    <div className="flex items-center gap-2 text-xs font-bold text-[#c6a35a] mt-2 uppercase tracking-wide">
+                        <CreditCard size={16} />
+                        <span>3 cuotas sin interés de ${(price/3).toLocaleString('es-AR', {maximumFractionDigits: 0})}</span>
+                    </div>
+                </div>
                 
                 <div className="w-full h-px bg-[#0f0f10]/10 mb-8"></div>
 
@@ -153,16 +173,16 @@ export default function ProductPage() {
                     {!selectedSize && <p className="text-xs text-red-500 font-bold mt-2 animate-pulse">* Elegí un talle para comprar</p>}
                 </div>
 
-                {/* BOTÓN DE COMPRA DORADO */}
+                {/* BOTÓN DE COMPRA */}
                 <button 
                     onClick={handleAddToCart}
                     disabled={!selectedSize || adding}
                     className={`w-full py-5 font-black uppercase tracking-[0.2em] transition-all transform hover:-translate-y-1 shadow-xl flex items-center justify-center gap-3 rounded-sm mb-8
                         ${adding 
-                            ? 'bg-green-600 text-white cursor-default' // Éxito
+                            ? 'bg-green-600 text-white cursor-default'
                             : !selectedSize 
-                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' // Desactivado
-                                : 'bg-[#c6a35a] text-[#0f0f10] hover:bg-[#0f0f10] hover:text-[#c6a35a]' // Activo (Dorado)
+                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                : 'bg-[#c6a35a] text-[#0f0f10] hover:bg-[#0f0f10] hover:text-[#c6a35a]'
                         }
                     `}
                 >
@@ -191,17 +211,31 @@ export default function ProductPage() {
             <div className="border-t border-[#0f0f10]/10 pt-16">
                 <h2 className="text-2xl font-black uppercase mb-8 tracking-tighter">También te puede interesar</h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 items-start">
-                    {relatedProducts.map((rel) => (
-                        <Link key={rel.id} href={`/producto/${rel.id}`} className="group block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-transparent hover:border-[#c6a35a]">
-                            <div className="w-full relative">
-                                <img src={rel.image_url} alt={rel.name} className="w-full h-auto object-contain mix-blend-multiply p-4" />
-                            </div>
-                            <div className="p-4 border-t border-gray-100">
-                                <h3 className="font-black text-[#0f0f10] text-xs uppercase truncate group-hover:text-[#c6a35a] transition-colors">{rel.name}</h3>
-                                <p className="font-bold text-[#0f0f10] text-sm mt-1">${(rel.price || 0).toLocaleString('es-AR')}</p>
-                            </div>
-                        </Link>
-                    ))}
+                    {relatedProducts.map((rel) => {
+                        const relPrice = Number(rel.price || 0);
+                        const relOld = Number(rel.old_price || 0);
+                        const relDiscount = relOld > relPrice;
+
+                        return (
+                            <Link key={rel.id} href={`/producto/${rel.id}`} className="group block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-transparent hover:border-[#c6a35a] relative">
+                                <div className="w-full relative">
+                                    <img src={rel.image_url} alt={rel.name} className="w-full h-auto object-contain mix-blend-multiply p-4" />
+                                    {relDiscount && (
+                                        <span className="absolute top-2 left-2 bg-[#c6a35a] text-[#0f0f10] text-[10px] font-black px-2 py-1 uppercase rounded-sm">
+                                            OFF
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="p-4 border-t border-gray-100">
+                                    <h3 className="font-black text-[#0f0f10] text-xs uppercase truncate group-hover:text-[#c6a35a] transition-colors">{rel.name}</h3>
+                                    <div className="mt-1">
+                                        {relDiscount && <p className="text-[10px] text-gray-400 line-through">${relOld.toLocaleString('es-AR')}</p>}
+                                        <p className="font-bold text-[#0f0f10] text-sm">${relPrice.toLocaleString('es-AR')}</p>
+                                    </div>
+                                </div>
+                            </Link>
+                        );
+                    })}
                 </div>
             </div>
         )}
