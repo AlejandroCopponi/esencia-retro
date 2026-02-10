@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Truck, ShieldCheck, Check, ShoppingBag, CreditCard } from 'lucide-react';
+import { ArrowLeft, Truck, ShieldCheck, Check, ShoppingBag, CreditCard, Minus, Plus } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 
 export default function ProductPage() {
@@ -15,7 +15,10 @@ export default function ProductPage() {
   const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // ESTADOS
   const [selectedSize, setSelectedSize] = useState(null);
+  const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
 
   const COLORS = {
@@ -31,7 +34,6 @@ export default function ProductPage() {
 
   async function fetchProduct() {
     try {
-      // 1. Producto principal
       const { data: currentProduct, error } = await supabase
         .from('products')
         .select('*')
@@ -41,7 +43,6 @@ export default function ProductPage() {
       if (error) throw error;
       setProduct(currentProduct);
 
-      // 2. Productos relacionados
       if (currentProduct) {
         const { data: related } = await supabase
           .from('products')
@@ -60,17 +61,28 @@ export default function ProductPage() {
     }
   }
 
+  // CONTADOR
+  const handleIncrease = () => setQuantity(prev => prev + 1);
+  const handleDecrease = () => setQuantity(prev => (prev > 1 ? prev - 1 : 1));
+
+  // --- FUNCIÓN CORREGIDA ---
   const handleAddToCart = () => {
     if (!selectedSize) {
       alert("Por favor, seleccioná un talle.");
       return;
     }
     setAdding(true);
-    addToCart({ ...product, size: selectedSize });
+    
+    // Preparamos el producto con el talle
+    const productToSend = { ...product, size: selectedSize };
+    
+    // Enviamos (Producto, Cantidad) por separado
+    addToCart(productToSend, quantity);
     
     setTimeout(() => {
       setAdding(false);
-    }, 1500);
+      setQuantity(1); // Reseteamos visualmente a 1
+    }, 800);
   };
 
   if (loading) return (
@@ -86,33 +98,30 @@ export default function ProductPage() {
     </div>
   );
 
-  // CÁLCULOS DE PRECIO
   const price = Number(product.price || 0);
   const oldPrice = Number(product.old_price || 0);
   const hasDiscount = oldPrice > price;
   const discountPercent = hasDiscount ? Math.round(((oldPrice - price) / oldPrice) * 100) : 0;
+  const totalPrice = price * quantity;
 
   return (
     <div className="min-h-screen font-sans pt-28 pb-12 px-4 md:px-8" style={{ background: COLORS.gradient, color: COLORS.ink }}>
       
       <div className="max-w-6xl mx-auto">
         
-        {/* BREADCRUMB */}
         <Link href="/catalogo" className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#6f6f73] hover:text-[#0f0f10] mb-8 transition-colors">
             <ArrowLeft size={16} /> Volver al Catálogo
         </Link>
 
-        {/* FICHA DE PRODUCTO */}
         <div className="grid md:grid-cols-2 gap-12 lg:gap-20 mb-20 items-start">
             
-            {/* COLUMNA IZQUIERDA: FOTO */}
+            {/* FOTO */}
             <div className="bg-white rounded-xl shadow-sm border border-transparent hover:border-[#c6a35a] transition-all duration-500 overflow-hidden relative w-full">
                 <img 
                     src={product.image_url} 
                     alt={product.name} 
                     className="w-full h-auto object-contain mix-blend-multiply p-4 md:p-8"
                 />
-                {/* Badge Descuento */}
                 {hasDiscount && (
                     <span className="absolute top-4 left-4 bg-[#c6a35a] text-[#0f0f10] text-sm font-black px-3 py-1 uppercase tracking-tighter rounded-sm shadow-sm z-10">
                         {discountPercent}% OFF
@@ -120,9 +129,8 @@ export default function ProductPage() {
                 )}
             </div>
 
-            {/* COLUMNA DERECHA: INFO */}
+            {/* INFO */}
             <div className="flex flex-col">
-                
                 <span className="text-[#c6a35a] font-bold uppercase tracking-widest text-xs mb-2">
                     {product.category || 'Retro Football'}
                 </span>
@@ -131,7 +139,6 @@ export default function ProductPage() {
                     {product.name}
                 </h1>
                 
-                {/* PRECIOS */}
                 <div className="mb-6">
                     {hasDiscount && (
                         <p className="text-xl text-gray-400 font-bold line-through decoration-red-500/50 mb-1">
@@ -150,10 +157,10 @@ export default function ProductPage() {
                 <div className="w-full h-px bg-[#0f0f10]/10 mb-8"></div>
 
                 {/* SELECTOR DE TALLE */}
-                <div className="mb-8">
+                <div className="mb-6">
                     <div className="flex justify-between mb-3">
-                        <label className="font-black uppercase text-sm tracking-wide">Seleccionar Talle</label>
-                        <Link href="/guia-talles" className="text-xs font-bold text-[#c6a35a] hover:underline">Ver Guía de Talles</Link>
+                        <label className="font-black uppercase text-sm tracking-wide">1. Seleccionar Talle</label>
+                        <Link href="/guia-talles" className="text-xs font-bold text-[#c6a35a] hover:underline">Ver Guía</Link>
                     </div>
                     <div className="flex flex-wrap gap-3">
                         {['S', 'M', 'L', 'XL', 'XXL'].map((size) => (
@@ -170,7 +177,38 @@ export default function ProductPage() {
                             </button>
                         ))}
                     </div>
-                    {!selectedSize && <p className="text-xs text-red-500 font-bold mt-2 animate-pulse">* Elegí un talle para comprar</p>}
+                    {!selectedSize && <p className="text-xs text-red-500 font-bold mt-2 animate-pulse">* Elegí un talle</p>}
+                </div>
+
+                {/* SELECTOR DE CANTIDAD */}
+                <div className="mb-8">
+                    <label className="font-black uppercase text-sm tracking-wide mb-3 block">2. Cantidad</label>
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center border border-[#0f0f10]/10 rounded overflow-hidden h-12 w-fit bg-white/50">
+                            <button 
+                                onClick={handleDecrease}
+                                className="w-12 h-full flex items-center justify-center hover:bg-[#0f0f10]/5 transition-colors text-[#0f0f10]"
+                                disabled={quantity <= 1}
+                            >
+                                <Minus size={16} />
+                            </button>
+                            <div className="w-12 h-full flex items-center justify-center font-black text-lg border-x border-[#0f0f10]/10">
+                                {quantity}
+                            </div>
+                            <button 
+                                onClick={handleIncrease}
+                                className="w-12 h-full flex items-center justify-center hover:bg-[#0f0f10]/5 transition-colors text-[#0f0f10]"
+                            >
+                                <Plus size={16} />
+                            </button>
+                        </div>
+                        
+                        {quantity > 1 && (
+                            <div className="text-sm font-bold text-[#6f6f73]">
+                                Total: <span className="text-[#0f0f10] font-black">${totalPrice.toLocaleString('es-AR')}</span>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* BOTÓN DE COMPRA */}
@@ -189,7 +227,7 @@ export default function ProductPage() {
                     {adding ? (
                         <>Agregado <Check size={20}/></>
                     ) : (
-                        <>Agregar al Carrito <ShoppingBag size={20}/></>
+                        <>Agregar {quantity > 1 ? `(${quantity})` : ''} al Carrito <ShoppingBag size={20}/></>
                     )}
                 </button>
 
@@ -205,37 +243,35 @@ export default function ProductPage() {
 
             </div>
         </div>
-
+        
         {/* RELACIONADOS */}
         {relatedProducts.length > 0 && (
             <div className="border-t border-[#0f0f10]/10 pt-16">
                 <h2 className="text-2xl font-black uppercase mb-8 tracking-tighter">También te puede interesar</h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 items-start">
                     {relatedProducts.map((rel) => {
-                        const relPrice = Number(rel.price || 0);
-                        const relOld = Number(rel.old_price || 0);
-                        const relDiscount = relOld > relPrice;
-
+                         const relPrice = Number(rel.price || 0);
+                         const relOld = Number(rel.old_price || 0);
+                         const relDiscount = relOld > relPrice;
                         return (
-                            <Link key={rel.id} href={`/producto/${rel.id}`} className="group block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-transparent hover:border-[#c6a35a] relative">
-                                <div className="w-full relative">
-                                    <img src={rel.image_url} alt={rel.name} className="w-full h-auto object-contain mix-blend-multiply p-4" />
-                                    {relDiscount && (
-                                        <span className="absolute top-2 left-2 bg-[#c6a35a] text-[#0f0f10] text-[10px] font-black px-2 py-1 uppercase rounded-sm">
-                                            OFF
-                                        </span>
-                                    )}
+                        <Link key={rel.id} href={`/producto/${rel.id}`} className="group block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-transparent hover:border-[#c6a35a] relative">
+                            <div className="w-full relative">
+                                <img src={rel.image_url} alt={rel.name} className="w-full h-auto object-contain mix-blend-multiply p-4" />
+                                {relDiscount && (
+                                    <span className="absolute top-2 left-2 bg-[#c6a35a] text-[#0f0f10] text-[10px] font-black px-2 py-1 uppercase rounded-sm">
+                                        OFF
+                                    </span>
+                                )}
+                            </div>
+                            <div className="p-4 border-t border-gray-100">
+                                <h3 className="font-black text-[#0f0f10] text-xs uppercase truncate group-hover:text-[#c6a35a] transition-colors">{rel.name}</h3>
+                                <div className="mt-1">
+                                    {relDiscount && <p className="text-[10px] text-gray-400 line-through">${relOld.toLocaleString('es-AR')}</p>}
+                                    <p className="font-bold text-[#0f0f10] text-sm">${relPrice.toLocaleString('es-AR')}</p>
                                 </div>
-                                <div className="p-4 border-t border-gray-100">
-                                    <h3 className="font-black text-[#0f0f10] text-xs uppercase truncate group-hover:text-[#c6a35a] transition-colors">{rel.name}</h3>
-                                    <div className="mt-1">
-                                        {relDiscount && <p className="text-[10px] text-gray-400 line-through">${relOld.toLocaleString('es-AR')}</p>}
-                                        <p className="font-bold text-[#0f0f10] text-sm">${relPrice.toLocaleString('es-AR')}</p>
-                                    </div>
-                                </div>
-                            </Link>
-                        );
-                    })}
+                            </div>
+                        </Link>
+                    )})}
                 </div>
             </div>
         )}
