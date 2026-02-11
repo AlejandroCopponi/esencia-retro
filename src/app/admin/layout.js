@@ -5,31 +5,27 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, ShoppingBag, Package, Users, 
-  Settings, LogOut, Tag, CreditCard, Truck, FileText, ChevronDown, ChevronRight, MessageCircle, Mail, MapPin 
+  Settings, LogOut, Tag, FileText, ChevronDown, ChevronRight, Menu, X 
 } from 'lucide-react';
 
 export default function AdminLayout({ children }) {
   const pathname = usePathname();
   const [openMenu, setOpenMenu] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Estado para el móvil
 
   const toggleMenu = (name) => {
     setOpenMenu(openMenu === name ? null : name);
   };
 
   const menuItems = [
-    { 
-      name: 'Inicio', 
-      href: '/admin', 
-      icon: LayoutDashboard 
-    },
+    { name: 'Inicio', href: '/admin', icon: LayoutDashboard },
     { 
       name: 'Estadísticas', 
       icon: LayoutDashboard, 
       submenu: [
         { name: 'Visión General', href: '/admin/estadisticas' },
-        { name: 'Pagos', href: '/admin/estadisticas/pagos' }, // Corregido: Solo Pagos
+        { name: 'Pagos', href: '/admin/estadisticas/pagos' },
         { name: 'Envíos', href: '/admin/estadisticas/envios' },
-        { name: 'Tráfico', href: '/admin/estadisticas/trafico' },
       ] 
     },
     { 
@@ -50,137 +46,74 @@ export default function AdminLayout({ children }) {
       ]
     },
     { 
-      name: 'Motor Promociones', 
-      icon: Tag, 
-      submenu: [
-        { name: 'Crear Regla', href: '/admin/promociones/crear' }, // Corregido: Sin 4x3
-        { name: 'Reglas Activas', href: '/admin/promociones' },
-      ]
+        name: 'ARCA', 
+        icon: FileText, 
+        submenu: [
+          { name: 'Emitir Facturas', href: '/admin/arca/emitir' },
+          { name: 'Emitir Notas de Crédito', href: '/admin/arca/notas-credito' },
+          { name: 'Historial', href: '/admin/arca/historial' },
+        ]
     },
     { 
-      name: 'ARCA', 
-      icon: FileText, 
-      submenu: [
-        { name: 'Emitir Facturas', href: '/admin/arca/emitir' }, // Desglosado
-        { name: 'Emitir Notas de Crédito', href: '/admin/arca/notas-credito' }, // Desglosado
-        { name: 'Historial', href: '/admin/arca/historial' }, // Desglosado
-      ]
-    },
-    { 
-      name: 'Clientes', 
-      icon: Users, 
-      submenu: [
-        { name: 'Lista de Clientes', href: '/admin/clientes' },
-        { name: 'Mensajes / Consultas', href: '/admin/clientes/mensajes' },
-      ]
-    },
-    { 
-      name: 'Finanzas', 
-      icon: CreditCard, 
-      submenu: [
-        { name: 'Flujo de Caja', href: '/admin/finanzas/flujo' },
-        { name: 'Gastos Operativos', href: '/admin/finanzas/gastos' },
-      ]
-    },
-    { 
-      name: 'Configuración', 
-      icon: Settings, 
-      submenu: [
-        { name: 'Pagos', href: '/admin/configuracion/pagos' },
-        { name: 'Envíos', href: '/admin/configuracion/envios' },
-        { name: 'Información de contacto', href: '/admin/configuracion/contacto' },
-        { name: 'Botón de WhatsApp', href: '/admin/configuracion/whatsapp' },
-        { name: 'E-mails automáticos', href: '/admin/configuracion/emails' },
-      ]
+        name: 'Configuración', 
+        icon: Settings, 
+        submenu: [
+          { name: 'Pagos', href: '/admin/configuracion/pagos' },
+          { name: 'Envíos', href: '/admin/configuracion/envios' },
+          { name: 'Información de contacto', href: '/admin/configuracion/contacto' },
+          { name: 'Botón de WhatsApp', href: '/admin/configuracion/whatsapp' },
+          { name: 'E-mails automáticos', href: '/admin/configuracion/emails' },
+        ]
     },
   ];
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', width: '100%', fontFamily: 'system-ui, sans-serif' }}>
+    <div className="flex min-h-screen bg-gray-100">
       
-      {/* SIDEBAR FIJO IZQUIERDA */}
-      <aside style={{
-        width: '280px', // Un poco más ancho para que entren las letras grandes
-        backgroundColor: '#111',
-        color: 'white',
-        height: '100vh',
-        position: 'fixed',
-        left: 0,
-        top: 0,
-        overflowY: 'auto',
-        display: 'flex',
-        flexDirection: 'column',
-        zIndex: 1000,
-        borderRight: '1px solid #222'
-      }}>
-        
-        {/* Header Logo */}
-        <div style={{ padding: '25px 20px', borderBottom: '1px solid #333' }}>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: '900', letterSpacing: '2px', color: '#c6a35a', margin: 0 }}>ADMIN</h1>
+      {/* SIDEBAR */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 w-72 bg-[#111] text-white transform transition-transform duration-300 ease-in-out overflow-y-auto
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
+        lg:translate-x-0 lg:static lg:inset-0
+      `}>
+        <div className="p-6 border-b border-gray-800 flex justify-between items-center">
+            <h1 className="text-2xl font-black tracking-tighter text-[#c6a35a]">ADMIN</h1>
+            <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-white">
+                <X size={24} />
+            </button>
         </div>
 
-        {/* Navegación */}
-        <nav style={{ flex: 1, padding: '20px 0' }}>
+        <nav className="p-4 space-y-2">
             {menuItems.map((item) => {
               const hasSubmenu = item.submenu && item.submenu.length > 0;
               const isExpanded = openMenu === item.name;
-              
-              // Verificamos si estamos dentro de esta sección
-              const isActiveParent = item.href ? pathname === item.href : false; 
-              // Si tiene submenú, checkeamos si alguna hija está activa
               const isChildActive = hasSubmenu && item.submenu.some(sub => pathname.startsWith(sub.href));
 
               return (
                 <div key={item.name}>
-                    {/* BOTÓN PRINCIPAL */}
                     <div 
-                        onClick={() => {
-                            if (hasSubmenu) toggleMenu(item.name);
-                        }}
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '16px 24px', // Más padding
-                            cursor: 'pointer',
-                            color: isActiveParent || isChildActive || isExpanded ? 'white' : '#999',
-                            backgroundColor: isActiveParent || isChildActive ? 'rgba(255,255,255,0.08)' : 'transparent',
-                            fontWeight: 'bold',
-                            fontSize: '16px', // LETRA MÁS GRANDE
-                            transition: '0.2s',
-                            userSelect: 'none'
-                        }}
+                        onClick={() => hasSubmenu ? toggleMenu(item.name) : null}
+                        className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${isChildActive ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'}`}
                     >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                            <item.icon size={20} color={isActiveParent || isChildActive ? '#c6a35a' : 'currentColor'} />
+                        <div className="flex items-center gap-3">
+                            <item.icon size={20} className={isChildActive ? 'text-[#c6a35a]' : ''} />
                             {hasSubmenu ? (
-                                <span>{item.name}</span>
+                                <span className="font-bold text-base">{item.name}</span>
                             ) : (
-                                <Link href={item.href} style={{ color: 'inherit', textDecoration: 'none', width: '100%' }}>{item.name}</Link>
+                                <Link href={item.href} className="font-bold text-base w-full">{item.name}</Link>
                             )}
                         </div>
-                        {hasSubmenu && (
-                            isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />
-                        )}
+                        {hasSubmenu && (isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />)}
                     </div>
 
-                    {/* SUBMENÚ */}
                     {hasSubmenu && isExpanded && (
-                        <div style={{ backgroundColor: '#000', borderLeft: '4px solid #c6a35a' }}>
+                        <div className="mt-1 ml-4 border-l-2 border-[#c6a35a]/30 space-y-1">
                             {item.submenu.map((subItem) => (
                                 <Link 
                                     key={subItem.name}
                                     href={subItem.href}
-                                    style={{
-                                        display: 'block',
-                                        padding: '12px 24px 12px 58px', // Más sangría y espacio
-                                        fontSize: '14px', // Subtítulos un poco más chicos que los títulos pero legibles
-                                        color: pathname === subItem.href ? '#c6a35a' : '#777',
-                                        textDecoration: 'none',
-                                        transition: '0.2s',
-                                        fontWeight: '500'
-                                    }}
-                                    className="hover:text-white"
+                                    onClick={() => setSidebarOpen(false)} // Cierra el menú al clickear en móvil
+                                    className={`block py-2 px-6 text-sm font-medium ${pathname === subItem.href ? 'text-[#c6a35a]' : 'text-gray-500 hover:text-white'}`}
                                 >
                                     {subItem.name}
                                 </Link>
@@ -191,36 +124,30 @@ export default function AdminLayout({ children }) {
               );
             })}
         </nav>
-
-        {/* Footer */}
-        <div style={{ padding: '20px', borderTop: '1px solid #333', backgroundColor: '#111' }}>
-            <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#ef4444', textDecoration: 'none', fontSize: '14px', fontWeight: 'bold', textTransform: 'uppercase' }}>
-                <LogOut size={18} /> Volver a Tienda
-            </Link>
-        </div>
       </aside>
 
       {/* CONTENIDO PRINCIPAL */}
-      <main style={{ 
-        marginLeft: '280px', // Ajustado al nuevo ancho del sidebar
-        width: 'calc(100% - 280px)',
-        backgroundColor: '#f3f4f6',
-        minHeight: '100vh'
-      }}>
-        
-        {/* Cabecera */}
-        <header style={{ height: '70px', backgroundColor: 'white', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 40px', position: 'sticky', top: 0, zIndex: 40 }}>
-            <h2 style={{ fontSize: '16px', fontWeight: 'bold', textTransform: 'uppercase', color: '#374151', margin: 0 }}>Panel de Control</h2>
-            <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#e5e7eb', border: '1px solid #d1d5db' }}></div>
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="h-16 bg-white border-b flex items-center justify-between px-4 lg:px-8 sticky top-0 z-40">
+            <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 text-gray-600">
+                <Menu size={24} />
+            </button>
+            <h2 className="text-sm font-black uppercase text-gray-400 tracking-widest hidden sm:block">Panel de Control</h2>
+            <div className="w-8 h-8 rounded-full bg-gray-200 border border-gray-300"></div>
         </header>
 
-        {/* Área de trabajo */}
-        <div style={{ padding: '40px' }}>
+        <main className="p-4 lg:p-10">
             {children}
-        </div>
+        </main>
+      </div>
 
-      </main>
-
+      {/* Overlay para cerrar el menú móvil al tocar fuera */}
+      {sidebarOpen && (
+        <div 
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden" 
+            onClick={() => setSidebarOpen(false)}
+        />
+      )}
     </div>
   );
 }
