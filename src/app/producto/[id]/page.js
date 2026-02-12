@@ -16,10 +16,10 @@ export default function ProductPage() {
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // ESTADOS
   const [selectedSize, setSelectedSize] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
+  const [currentImage, setCurrentImage] = useState('');
 
   const COLORS = {
     gradient: 'linear-gradient(180deg, #f3ead7 0%, #efe3cf 100%)',
@@ -42,6 +42,7 @@ export default function ProductPage() {
 
       if (error) throw error;
       setProduct(currentProduct);
+      setCurrentImage(currentProduct.image_url);
 
       if (currentProduct) {
         const { data: related } = await supabase
@@ -53,7 +54,6 @@ export default function ProductPage() {
         
         setRelatedProducts(related || []);
       }
-
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -61,27 +61,20 @@ export default function ProductPage() {
     }
   }
 
-  // CONTADOR
   const handleIncrease = () => setQuantity(prev => prev + 1);
   const handleDecrease = () => setQuantity(prev => (prev > 1 ? prev - 1 : 1));
 
-  // --- FUNCIÓN CORREGIDA ---
   const handleAddToCart = () => {
     if (!selectedSize) {
       alert("Por favor, seleccioná un talle.");
       return;
     }
     setAdding(true);
-    
-    // Preparamos el producto con el talle
     const productToSend = { ...product, size: selectedSize };
-    
-    // Enviamos (Producto, Cantidad) por separado
     addToCart(productToSend, quantity);
-    
     setTimeout(() => {
       setAdding(false);
-      setQuantity(1); // Reseteamos visualmente a 1
+      setQuantity(1);
     }, 800);
   };
 
@@ -102,31 +95,52 @@ export default function ProductPage() {
   const oldPrice = Number(product.old_price || 0);
   const hasDiscount = oldPrice > price;
   const discountPercent = hasDiscount ? Math.round(((oldPrice - price) / oldPrice) * 100) : 0;
-  const totalPrice = price * quantity;
+
+  const productImages = [
+    product.image_url, 
+    product.image_url2, 
+    product.image_url3, 
+    product.image_url4, 
+    product.image_url5
+  ].filter(Boolean);
 
   return (
     <div className="min-h-screen font-sans pt-28 pb-12 px-4 md:px-8" style={{ background: COLORS.gradient, color: COLORS.ink }}>
-      
       <div className="max-w-6xl mx-auto">
-        
         <Link href="/catalogo" className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#6f6f73] hover:text-[#0f0f10] mb-8 transition-colors">
             <ArrowLeft size={16} /> Volver al Catálogo
         </Link>
 
         <div className="grid md:grid-cols-2 gap-12 lg:gap-20 mb-20 items-start">
             
-            {/* FOTO */}
-            <div className="bg-white rounded-xl shadow-sm border border-transparent hover:border-[#c6a35a] transition-all duration-500 overflow-hidden relative w-full">
-                <img 
-                    src={product.image_url} 
-                    alt={product.name} 
-                    className="w-full h-auto object-contain mix-blend-multiply p-4 md:p-8"
-                />
-                {hasDiscount && (
-                    <span className="absolute top-4 left-4 bg-[#c6a35a] text-[#0f0f10] text-sm font-black px-3 py-1 uppercase tracking-tighter rounded-sm shadow-sm z-10">
-                        {discountPercent}% OFF
-                    </span>
-                )}
+            {/* GALERÍA */}
+            <div className="flex flex-col gap-4">
+              <div className="bg-white rounded-xl shadow-sm border border-transparent hover:border-[#c6a35a] transition-all duration-500 overflow-hidden relative w-full">
+                  <img 
+                      src={currentImage} 
+                      alt={product.name} 
+                      className="w-full h-auto object-contain mix-blend-multiply p-4 md:p-8"
+                  />
+                  {hasDiscount && (
+                      <span className="absolute top-4 left-4 bg-[#c6a35a] text-[#0f0f10] text-sm font-black px-3 py-1 uppercase tracking-tighter rounded-sm shadow-sm z-10">
+                          {discountPercent}% OFF
+                      </span>
+                  )}
+              </div>
+              
+              {productImages.length > 1 && (
+                <div className="flex flex-wrap gap-2">
+                  {productImages.map((img, index) => (
+                    <button 
+                      key={index} 
+                      onClick={() => setCurrentImage(img)}
+                      className={`w-20 h-20 bg-white border-2 rounded-lg p-2 transition-all ${currentImage === img ? 'border-[#0f0f10]' : 'border-transparent opacity-60'}`}
+                    >
+                      <img src={img} className="w-full h-full object-contain mix-blend-multiply" alt={`Vista ${index + 1}`} />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* INFO */}
@@ -135,7 +149,8 @@ export default function ProductPage() {
                     {product.category || 'Retro Football'}
                 </span>
                 
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase leading-[0.9] tracking-tighter mb-4 text-[#0f0f10]">
+                {/* REFORMA 1: BAJAMOS EL TAMAÑO AL TITULO */}
+                <h1 className="text-3xl md:text-4xl font-black uppercase leading-[0.9] tracking-tighter mb-4 text-[#0f0f10]">
                     {product.name}
                 </h1>
                 
@@ -156,12 +171,8 @@ export default function ProductPage() {
                 
                 <div className="w-full h-px bg-[#0f0f10]/10 mb-8"></div>
 
-                {/* SELECTOR DE TALLE */}
                 <div className="mb-6">
-                    <div className="flex justify-between mb-3">
-                        <label className="font-black uppercase text-sm tracking-wide">1. Seleccionar Talle</label>
-                        <Link href="/guia-talles" className="text-xs font-bold text-[#c6a35a] hover:underline">Ver Guía</Link>
-                    </div>
+                    <label className="font-black uppercase text-sm tracking-wide mb-3 block">1. Seleccionar Talle</label>
                     <div className="flex flex-wrap gap-3">
                         {['S', 'M', 'L', 'XL', 'XXL'].map((size) => (
                             <button
@@ -177,104 +188,80 @@ export default function ProductPage() {
                             </button>
                         ))}
                     </div>
-                    {!selectedSize && <p className="text-xs text-red-500 font-bold mt-2 animate-pulse">* Elegí un talle</p>}
                 </div>
 
-                {/* SELECTOR DE CANTIDAD */}
                 <div className="mb-8">
                     <label className="font-black uppercase text-sm tracking-wide mb-3 block">2. Cantidad</label>
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center border border-[#0f0f10]/10 rounded overflow-hidden h-12 w-fit bg-white/50">
-                            <button 
-                                onClick={handleDecrease}
-                                className="w-12 h-full flex items-center justify-center hover:bg-[#0f0f10]/5 transition-colors text-[#0f0f10]"
-                                disabled={quantity <= 1}
-                            >
-                                <Minus size={16} />
-                            </button>
-                            <div className="w-12 h-full flex items-center justify-center font-black text-lg border-x border-[#0f0f10]/10">
-                                {quantity}
-                            </div>
-                            <button 
-                                onClick={handleIncrease}
-                                className="w-12 h-full flex items-center justify-center hover:bg-[#0f0f10]/5 transition-colors text-[#0f0f10]"
-                            >
-                                <Plus size={16} />
-                            </button>
-                        </div>
-                        
-                        {quantity > 1 && (
-                            <div className="text-sm font-bold text-[#6f6f73]">
-                                Total: <span className="text-[#0f0f10] font-black">${totalPrice.toLocaleString('es-AR')}</span>
-                            </div>
-                        )}
+                    <div className="flex items-center border border-[#0f0f10]/10 rounded overflow-hidden h-12 w-fit bg-white/50">
+                        <button onClick={handleDecrease} className="w-12 h-full flex items-center justify-center hover:bg-[#0f0f10]/5 transition-colors text-[#0f0f10]"><Minus size={16} /></button>
+                        <div className="w-12 h-full flex items-center justify-center font-black text-lg border-x border-[#0f0f10]/10">{quantity}</div>
+                        <button onClick={handleIncrease} className="w-12 h-full flex items-center justify-center hover:bg-[#0f0f10]/5 transition-colors text-[#0f0f10]"><Plus size={16} /></button>
                     </div>
                 </div>
 
-                {/* BOTÓN DE COMPRA */}
                 <button 
                     onClick={handleAddToCart}
                     disabled={!selectedSize || adding}
                     className={`w-full py-5 font-black uppercase tracking-[0.2em] transition-all transform hover:-translate-y-1 shadow-xl flex items-center justify-center gap-3 rounded-sm mb-8
-                        ${adding 
-                            ? 'bg-green-600 text-white cursor-default'
-                            : !selectedSize 
-                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                : 'bg-[#c6a35a] text-[#0f0f10] hover:bg-[#0f0f10] hover:text-[#c6a35a]'
-                        }
+                        ${adding ? 'bg-green-600 text-white' : !selectedSize ? 'bg-gray-300 text-gray-500' : 'bg-[#c6a35a] text-[#0f0f10] hover:bg-[#0f0f10] hover:text-[#c6a35a]'}
                     `}
                 >
-                    {adding ? (
-                        <>Agregado <Check size={20}/></>
-                    ) : (
-                        <>Agregar {quantity > 1 ? `(${quantity})` : ''} al Carrito <ShoppingBag size={20}/></>
-                    )}
+                    {adding ? <>Agregado <Check size={20}/></> : <>Agregar al Carrito <ShoppingBag size={20}/></>}
                 </button>
 
-                {/* GARANTÍAS */}
-                <div className="grid grid-cols-2 gap-4 text-xs font-bold text-[#6f6f73] uppercase tracking-wide">
-                    <div className="flex items-center gap-3 p-3 border border-[#0f0f10]/10 rounded bg-white/50">
-                        <Truck className="text-[#c6a35a]" size={20} /> Envíos a todo el país
-                    </div>
-                    <div className="flex items-center gap-3 p-3 border border-[#0f0f10]/10 rounded bg-white/50">
-                        <ShieldCheck className="text-[#c6a35a]" size={20} /> Compra Protegida
-                    </div>
+                {/* REFORMA 2: SOLO LA DESCRIPCION CORTA DE LA IA */}
+                <div className="mb-10 whitespace-pre-line text-sm leading-relaxed text-[#0f0f10] opacity-90 border-t border-[#0f0f10]/5 pt-8">
+                  {product.description}
                 </div>
 
+                <div className="grid grid-cols-2 gap-4 text-xs font-bold text-[#6f6f73] uppercase tracking-wide">
+                    <div className="flex items-center gap-3 p-3 border border-[#0f0f10]/10 rounded bg-white/50"><Truck className="text-[#c6a35a]" size={20} /> Envíos a todo el país</div>
+                    <div className="flex items-center gap-3 p-3 border border-[#0f0f10]/10 rounded bg-white/50"><ShieldCheck className="text-[#c6a35a]" size={20} /> Compra Protegida</div>
+                </div>
             </div>
         </div>
         
-        {/* RELACIONADOS */}
+        {/* REFORMA 3: RELACIONADOS 20% MAS CHICOS */}
         {relatedProducts.length > 0 && (
-            <div className="border-t border-[#0f0f10]/10 pt-16">
-                <h2 className="text-2xl font-black uppercase mb-8 tracking-tighter">También te puede interesar</h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 items-start">
+            <div className="border-t border-[#0f0f10]/10 pt-16 mb-20">
+                <h2 className="text-xl font-black uppercase mb-8 tracking-tighter">También te puede interesar</h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 items-start">
                     {relatedProducts.map((rel) => {
                          const relPrice = Number(rel.price || 0);
-                         const relOld = Number(rel.old_price || 0);
-                         const relDiscount = relOld > relPrice;
                         return (
                         <Link key={rel.id} href={`/producto/${rel.id}`} className="group block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-transparent hover:border-[#c6a35a] relative">
-                            <div className="w-full relative">
-                                <img src={rel.image_url} alt={rel.name} className="w-full h-auto object-contain mix-blend-multiply p-4" />
-                                {relDiscount && (
-                                    <span className="absolute top-2 left-2 bg-[#c6a35a] text-[#0f0f10] text-[10px] font-black px-2 py-1 uppercase rounded-sm">
-                                        OFF
-                                    </span>
-                                )}
-                            </div>
-                            <div className="p-4 border-t border-gray-100">
-                                <h3 className="font-black text-[#0f0f10] text-xs uppercase truncate group-hover:text-[#c6a35a] transition-colors">{rel.name}</h3>
-                                <div className="mt-1">
-                                    {relDiscount && <p className="text-[10px] text-gray-400 line-through">${relOld.toLocaleString('es-AR')}</p>}
-                                    <p className="font-bold text-[#0f0f10] text-sm">${relPrice.toLocaleString('es-AR')}</p>
-                                </div>
+                            {/* Ajustamos padding para que la imagen se vea más chica */}
+                            <img src={rel.image_url} alt={rel.name} className="w-full h-auto object-contain mix-blend-multiply p-6 scale-90" />
+                            <div className="p-3 border-t border-gray-100">
+                                <h3 className="font-black text-[#0f0f10] text-[10px] uppercase truncate group-hover:text-[#c6a35a] transition-colors">{rel.name}</h3>
+                                <p className="font-bold text-[#0f0f10] text-xs">${relPrice.toLocaleString('es-AR')}</p>
                             </div>
                         </Link>
                     )})}
                 </div>
             </div>
         )}
+
+        {/* REFORMA 4: TEXTO FIJO AL FINAL DE TODO */}
+        <div className="max-w-3xl mx-auto border-t border-[#0f0f10]/10 pt-16 text-sm leading-relaxed text-[#0f0f10]/80">
+            <h3 className="font-black uppercase tracking-widest mb-6 text-xs text-[#0f0f10]">Características destacadas:</h3>
+            <p className="mb-2">⭐ Estampado en vinilo premium que garantiza durabilidad y un acabado impecable.</p>
+            <p className="mb-2">🪡 Escudo y marca bordados, aportando un toque auténtico y elegante.</p>
+            <p className="mb-2">🛡️ Cuello reforzado para mayor resistencia y comodidad.</p>
+            <p className="mb-6">✂️ Tiras cocidas, que aseguran una mayor vida útil de la camiseta.</p>
+
+            <p className="font-bold mb-10 text-[#0f0f10]">Esta camiseta es la elección perfecta para quienes valoran la calidad, el confort y el estilo en una sola prenda.</p>
+
+            <h3 className="font-black uppercase tracking-widest mb-6 text-xs text-[#0f0f10]">Consejos para lavar tu camiseta:</h3>
+            <ul className="list-disc pl-5 space-y-2">
+                <li>Voltea tu camiseta para mayor seguridad.</li>
+                <li>Lavar a mano usando agua fria.</li>
+                <li>Evitar remojar la prenda por más de una hora.</li>
+                <li>Uso moderado de detergentes (evitar suavizantes).</li>
+                <li>Secar a la sombra, colgada en una percha.</li>
+                <li>Evitar secadora y plancha electrica.</li>
+            </ul>
+        </div>
 
       </div>
     </div>
