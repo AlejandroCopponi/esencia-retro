@@ -45,12 +45,13 @@ export default function ProductPage() {
       setCurrentImage(currentProduct.image_url);
 
       if (currentProduct) {
+        // CAMBIO 1: Traemos 10 productos para asegurar que el carrusel se llene
         const { data: related } = await supabase
           .from('products')
           .select('*')
           .eq('category', currentProduct.category)
           .neq('id', currentProduct.id)
-          .limit(4);
+          .limit(10); 
         
         setRelatedProducts(related || []);
       }
@@ -149,7 +150,6 @@ export default function ProductPage() {
                     {product.category || 'Retro Football'}
                 </span>
                 
-                {/* REFORMA 1: BAJAMOS EL TAMAÑO AL TITULO */}
                 <h1 className="text-3xl md:text-4xl font-black uppercase leading-[0.9] tracking-tighter mb-4 text-[#0f0f10]">
                     {product.name}
                 </h1>
@@ -209,7 +209,7 @@ export default function ProductPage() {
                     {adding ? <>Agregado <Check size={20}/></> : <>Agregar al Carrito <ShoppingBag size={20}/></>}
                 </button>
 
-                {/* REFORMA 2: SOLO LA DESCRIPCION CORTA DE LA IA */}
+                {/* DESCRIPCIÓN CORTA (IA) */}
                 <div className="mb-10 whitespace-pre-line text-sm leading-relaxed text-[#0f0f10] opacity-90 border-t border-[#0f0f10]/5 pt-8">
                   {product.description}
                 </div>
@@ -221,17 +221,24 @@ export default function ProductPage() {
             </div>
         </div>
         
-        {/* REFORMA 3: RELACIONADOS 20% MAS CHICOS */}
+        {/* CAMBIO 2: CARRUSEL HORIZONTAL FORZADO */}
         {relatedProducts.length > 0 && (
             <div className="border-t border-[#0f0f10]/10 pt-16 mb-20">
                 <h2 className="text-xl font-black uppercase mb-8 tracking-tighter">También te puede interesar</h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 items-start">
+                
+                {/* flex-nowrap: obliga a estar en una linea. overflow-x-auto: activa el scroll */}
+                <div 
+                    className="flex flex-nowrap overflow-x-auto gap-4 pb-8 px-1 snap-x snap-mandatory" 
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                >
                     {relatedProducts.map((rel) => {
                          const relPrice = Number(rel.price || 0);
                         return (
-                        <Link key={rel.id} href={`/producto/${rel.id}`} className="group block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-transparent hover:border-[#c6a35a] relative">
-                            {/* Ajustamos padding para que la imagen se vea más chica */}
-                            <img src={rel.image_url} alt={rel.name} className="w-full h-auto object-contain mix-blend-multiply p-6 scale-90" />
+                        <Link key={rel.id} href={`/producto/${rel.id}`} 
+                            /* CAMBIO 3: flex-none y w-48 (ancho fijo) para que no se achiquen */
+                            className="flex-none w-44 md:w-56 snap-start group block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-transparent hover:border-[#c6a35a] relative"
+                        >
+                            <img src={rel.image_url} alt={rel.name} className="w-full h-36 md:h-48 object-contain mix-blend-multiply p-6 scale-90" />
                             <div className="p-3 border-t border-gray-100">
                                 <h3 className="font-black text-[#0f0f10] text-[10px] uppercase truncate group-hover:text-[#c6a35a] transition-colors">{rel.name}</h3>
                                 <p className="font-bold text-[#0f0f10] text-xs">${relPrice.toLocaleString('es-AR')}</p>
@@ -242,7 +249,7 @@ export default function ProductPage() {
             </div>
         )}
 
-        {/* REFORMA 4: TEXTO FIJO AL FINAL DE TODO */}
+        {/* TEXTO FIJO ABAJO DEL TODO */}
         <div className="max-w-3xl mx-auto border-t border-[#0f0f10]/10 pt-16 text-sm leading-relaxed text-[#0f0f10]/80">
             <h3 className="font-black uppercase tracking-widest mb-6 text-xs text-[#0f0f10]">Características destacadas:</h3>
             <p className="mb-2">⭐ Estampado en vinilo premium que garantiza durabilidad y un acabado impecable.</p>

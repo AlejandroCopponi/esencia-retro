@@ -1,16 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { Upload, ArrowLeft, Save, Loader2, Tag, Globe, Package, X, CheckCircle2, Sparkles } from 'lucide-react';
+import { Upload, ArrowLeft, Loader2, Globe, Package, X, CheckCircle2, Sparkles, Tag } from 'lucide-react';
 import Link from 'next/link';
 
 export default function CrearProducto() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [converting, setConverting] = useState(false);
-  const [loadingIA, setLoadingIA] = useState(null); // Estado para saber qué campo está generando la IA
+  const [loadingIA, setLoadingIA] = useState(null);
+  
+  // --- NUEVO: ESTADO PARA CATEGORÍAS ---
+  const [categories, setCategories] = useState([]);
   
   const [imageFiles, setImageFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
@@ -27,7 +30,8 @@ export default function CrearProducto() {
     name: '',
     price: '',
     compare_at_price: '',
-    category: 'nacional',
+    category: '', // Ahora empieza vacío
+    subcategory: '', // NUEVO CAMPO
     description: '',
     sku: '',
     tags: '',
@@ -41,24 +45,48 @@ export default function CrearProducto() {
     stock_2: 0, stock_4: 0, stock_6: 0, stock_8: 0, stock_10: 0, stock_12: 0, stock_14: 0, stock_16: 0
   });
 
+  // --- CARGAR CATEGORÍAS AL INICIO ---
+  useEffect(() => {
+    async function fetchCategories() {
+      const { data } = await supabase.from('categories').select('*').order('name', { ascending: true });
+      if (data) setCategories(data);
+    }
+    fetchCategories();
+  }, []);
+
+  // Helpers para obtener info de la categoría actual
+  const activeCategory = categories.find(c => c.name === formData.category);
+  const currentSubcategories = activeCategory ? activeCategory.subcategories : [];
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Si cambia la categoría, reseteamos la subcategoría
+    if (name === 'category') {
+        setFormData(prev => ({ ...prev, category: value, subcategory: '' }));
+    } else {
+        setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const generarIA = async (campo) => {
-    // Verificamos que al menos tenga nombre, si no la IA no sabe de qué hablar
     if (!formData.name) return alert("Ponele un nombre primero, Ale.");
+    if (!formData.category) return alert("Seleccioná una categoría para que la IA sepa el contexto.");
     
-    setLoadingIA(campo); // Activa el loader en el botón específico
+    setLoadingIA(campo);
 
     try {
+      // Buscamos el contexto de la categoría seleccionada
+      const contextToSend = activeCategory ? activeCategory.ai_context : '';
+
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           nombre: formData.name, 
-          categoria: formData.category, 
+          categoria: formData.category,
+          subcategoria: formData.subcategory, // Le mandamos la sub
+          contexto: contextToSend, // LE MANDAMOS EL CONTEXTO DEFINIDO EN EL ADMIN
           tipo: campo 
         }),
       });
@@ -66,16 +94,15 @@ export default function CrearProducto() {
       const data = await res.json();
 
       if (data.resultado) {
-        // Actualizamos el estado del formulario con lo que devolvió Gemini
         setFormData(prev => ({ ...prev, [campo]: data.resultado }));
       } else {
-        alert("La IA tiró un error. Revisá si la API KEY está bien configurada.");
+        alert("La IA tiró un error. Revisá la API KEY.");
       }
     } catch (error) {
       console.error("Error conectando con Gemini:", error);
-      alert("Error de red o el servidor no responde.");
+      alert("Error de red.");
     } finally {
-      setLoadingIA(null); // Apaga el loader sin importar el resultado
+      setLoadingIA(null);
     }
   };
 
@@ -130,6 +157,8 @@ export default function CrearProducto() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.category) return alert("Por favor seleccioná una categoría.");
+    
     setLoading(true);
     try {
       const uploadedUrls = [];
@@ -154,7 +183,10 @@ export default function CrearProducto() {
           seo_description: formData.seo_description,
           image_url: uploadedUrls[0] || '',
           images_gallery: uploadedUrls,
-          category: formData.category,
+          
+          category: formData.category, // Guardamos categoría real
+          subcategory: formData.subcategory, // Guardamos subcategoría nueva
+          
           weight: Number(formData.weight),
           width: Number(formData.width),
           height: Number(formData.height),
@@ -200,16 +232,41 @@ export default function CrearProducto() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="md:col-span-2">
                 <label className="block text-xs font-black uppercase text-gray-500 mb-2">Nombre del Producto</label>
-                <input name="name" onChange={handleChange} className="w-full p-4 border-2 border-gray-300 rounded-lg font-bold focus:border-black outline-none transition-all text-xl" required />
+                <input name="name" onChange={handleChange} className="w-full p-4 border-2 border-gray-300 rounded-lg font-bold focus:border-black outline-none transition-all text-xl" required placeholder="Ej: Camiseta Retro 1986" />
               </div>
 
-              <div className="md:col-span-2">
-                <label className="block text-xs font-black uppercase text-gray-500 mb-2 tracking-widest text-gray-400">Categoría</label>
-                <select name="category" onChange={handleChange} value={formData.category} className="w-full p-4 border-2 border-gray-300 rounded-lg font-bold bg-white focus:border-black outline-none transition-all text-lg">
-                  <option value="nacional">Clubes Nacionales</option>
-                  <option value="internacional">Clubes Internacionales</option>
-                  <option value="selecciones">Selecciones</option>
-                  <option value="retro">Leyendas / Retro</option>
+              {/* --- SELECTOR DE CATEGORÍA DINÁMICO --- */}
+              <div>
+                <label className="block text-xs font-black uppercase text-gray-500 mb-2 tracking-widest">Categoría</label>
+                <select 
+                    name="category" 
+                    onChange={handleChange} 
+                    value={formData.category} 
+                    className="w-full p-4 border-2 border-gray-300 rounded-lg font-bold bg-white focus:border-black outline-none transition-all text-lg"
+                >
+                  <option value="">Seleccionar...</option>
+                  {categories.map(cat => (
+                      <option key={cat.id} value={cat.name}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* --- SELECTOR DE SUBCATEGORÍA --- */}
+              <div>
+                <label className="block text-xs font-black uppercase text-gray-500 mb-2 tracking-widest flex items-center gap-2">
+                    Subcategoría <Tag size={12}/>
+                </label>
+                <select 
+                    name="subcategory" 
+                    onChange={handleChange} 
+                    value={formData.subcategory} 
+                    disabled={!currentSubcategories || currentSubcategories.length === 0}
+                    className="w-full p-4 border-2 border-gray-300 rounded-lg font-bold bg-white focus:border-black outline-none transition-all text-lg disabled:bg-gray-100 disabled:text-gray-400"
+                >
+                  <option value="">{currentSubcategories && currentSubcategories.length > 0 ? 'Seleccionar...' : '---'}</option>
+                  {currentSubcategories && currentSubcategories.map((sub, idx) => (
+                      <option key={idx} value={sub}>{sub}</option>
+                  ))}
                 </select>
               </div>
 
@@ -232,10 +289,11 @@ export default function CrearProducto() {
                 <div className="flex justify-between items-center mb-2">
                     <label className="block text-xs font-black uppercase text-gray-500">Descripción Detallada</label>
                     <button type="button" onClick={() => generarIA('description')} className="text-[10px] bg-purple-600 text-white px-3 py-1 rounded font-black flex items-center gap-1 hover:bg-black transition-all shadow-sm">
-                        {loadingIA === 'description' ? <Loader2 className="animate-spin" size={12}/> : <Sparkles size={12}/>} GENERAR DESCRIPCIÓN CON IA
+                        {loadingIA === 'description' ? <Loader2 className="animate-spin" size={12}/> : <Sparkles size={12}/>} 
+                        {formData.category ? `GENERAR DESCRIPCIÓN (${formData.category})` : 'GENERAR CON IA'}
                     </button>
                 </div>
-                <textarea name="description" value={formData.description} rows="5" onChange={handleChange} className="w-full p-4 border-2 border-gray-300 rounded-lg text-lg focus:border-black outline-none transition-all" />
+                <textarea name="description" value={formData.description} rows="5" onChange={handleChange} className="w-full p-4 border-2 border-gray-300 rounded-lg text-lg focus:border-black outline-none transition-all" placeholder={formData.category ? `La IA usará el estilo de "${formData.category}"...` : "Seleccioná una categoría primero..."} />
               </div>
             </div>
           </section>
