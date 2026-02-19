@@ -2,19 +2,27 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, ShoppingBag, Package, Users, 
-  Settings, LogOut, Tag, CreditCard, FileText, ChevronDown, ChevronRight, Menu, X 
+  Settings, LogOut, Tag, CreditCard, FileText, ChevronDown, ChevronRight, Menu, X, Store 
 } from 'lucide-react';
 
 export default function AdminLayout({ children }) {
+  const router = useRouter();
   const pathname = usePathname();
   const [openMenu, setOpenMenu] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const toggleMenu = (name) => {
     setOpenMenu(openMenu === name ? null : name);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
   };
 
   // --- REINTEGRADO EL ESQUELETO COMPLETO PACTADO ---
@@ -117,6 +125,7 @@ export default function AdminLayout({ children }) {
             {menuItems.map((item) => {
               const hasSubmenu = item.submenu && item.submenu.length > 0;
               const isExpanded = openMenu === item.name;
+              // Corrección para que marque activo si estás en una subruta
               const isChildActive = hasSubmenu && item.submenu.some(sub => pathname.startsWith(sub.href));
 
               return (
@@ -153,6 +162,26 @@ export default function AdminLayout({ children }) {
                 </div>
               );
             })}
+
+            {/* --- SECCIÓN NUEVA: ACCIONES DE SALIDA --- */}
+            <div className="pt-6 mt-6 border-t border-gray-800 space-y-2">
+                
+                {/* BOTÓN IR A LA TIENDA */}
+                <Link href="/" target="_blank" className="flex items-center gap-3 p-3 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors">
+                    <Store size={20} />
+                    <span className="font-bold text-[16px]">Ir a la Tienda</span>
+                </Link>
+
+                {/* BOTÓN CERRAR SESIÓN */}
+                <button 
+                    onClick={handleLogout} 
+                    className="w-full flex items-center gap-3 p-3 rounded-lg text-red-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                >
+                    <LogOut size={20} />
+                    <span className="font-bold text-[16px]">Cerrar Sesión</span>
+                </button>
+            </div>
+
         </nav>
       </aside>
 
@@ -164,7 +193,7 @@ export default function AdminLayout({ children }) {
             </button>
             <h2 className="text-sm font-black uppercase text-gray-400 tracking-widest hidden sm:block">Panel de Control</h2>
             <div className="flex items-center gap-4">
-                <div className="w-8 h-8 rounded-full bg-gray-200 border border-gray-300"></div>
+                <div className="w-8 h-8 rounded-full bg-[#c6a35a] border border-black flex items-center justify-center font-bold text-xs shadow-sm">A</div>
             </div>
         </header>
 
