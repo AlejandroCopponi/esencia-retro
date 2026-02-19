@@ -12,7 +12,6 @@ export default function CrearProducto() {
   const [converting, setConverting] = useState(false);
   const [loadingIA, setLoadingIA] = useState(null);
   
-  // --- NUEVO: ESTADO PARA CATEGORÍAS ---
   const [categories, setCategories] = useState([]);
   
   const [imageFiles, setImageFiles] = useState([]);
@@ -30,8 +29,8 @@ export default function CrearProducto() {
     name: '',
     price: '',
     compare_at_price: '',
-    category: '', // Ahora empieza vacío
-    subcategory: '', // NUEVO CAMPO
+    category: '', 
+    subcategory: '', 
     description: '',
     sku: '',
     tags: '',
@@ -45,7 +44,6 @@ export default function CrearProducto() {
     stock_2: 0, stock_4: 0, stock_6: 0, stock_8: 0, stock_10: 0, stock_12: 0, stock_14: 0, stock_16: 0
   });
 
-  // --- CARGAR CATEGORÍAS AL INICIO ---
   useEffect(() => {
     async function fetchCategories() {
       const { data } = await supabase.from('categories').select('*').order('name', { ascending: true });
@@ -54,14 +52,11 @@ export default function CrearProducto() {
     fetchCategories();
   }, []);
 
-  // Helpers para obtener info de la categoría actual
   const activeCategory = categories.find(c => c.name === formData.category);
   const currentSubcategories = activeCategory ? activeCategory.subcategories : [];
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
-    // Si cambia la categoría, reseteamos la subcategoría
     if (name === 'category') {
         setFormData(prev => ({ ...prev, category: value, subcategory: '' }));
     } else {
@@ -76,8 +71,12 @@ export default function CrearProducto() {
     setLoadingIA(campo);
 
     try {
-      // Buscamos el contexto de la categoría seleccionada
+      // 1. Buscamos el contexto de la categoría
       const contextToSend = activeCategory ? activeCategory.ai_context : '';
+      
+      // 2. Buscamos el texto cortito de la categoría 
+      // IMPORTANTE: Asegurate de crear la columna 'short_text' en tu tabla categories de Supabase
+      const textoPegaditoToSend = activeCategory ? activeCategory.short_text : '';
 
       const res = await fetch('/api/generate', {
         method: 'POST',
@@ -85,8 +84,9 @@ export default function CrearProducto() {
         body: JSON.stringify({ 
           nombre: formData.name, 
           categoria: formData.category,
-          subcategoria: formData.subcategory, // Le mandamos la sub
-          contexto: contextToSend, // LE MANDAMOS EL CONTEXTO DEFINIDO EN EL ADMIN
+          subcategoria: formData.subcategory,
+          contexto: contextToSend, 
+          texto_fijo: textoPegaditoToSend, // 3. SE LO MANDAMOS AL BACKEND
           tipo: campo 
         }),
       });
@@ -184,8 +184,8 @@ export default function CrearProducto() {
           image_url: uploadedUrls[0] || '',
           images_gallery: uploadedUrls,
           
-          category: formData.category, // Guardamos categoría real
-          subcategory: formData.subcategory, // Guardamos subcategoría nueva
+          category: formData.category, 
+          subcategory: formData.subcategory, 
           
           weight: Number(formData.weight),
           width: Number(formData.width),
@@ -235,7 +235,6 @@ export default function CrearProducto() {
                 <input name="name" onChange={handleChange} className="w-full p-4 border-2 border-gray-300 rounded-lg font-bold focus:border-black outline-none transition-all text-xl" required placeholder="Ej: Camiseta Retro 1986" />
               </div>
 
-              {/* --- SELECTOR DE CATEGORÍA DINÁMICO --- */}
               <div>
                 <label className="block text-xs font-black uppercase text-gray-500 mb-2 tracking-widest">Categoría</label>
                 <select 
@@ -251,7 +250,6 @@ export default function CrearProducto() {
                 </select>
               </div>
 
-              {/* --- SELECTOR DE SUBCATEGORÍA --- */}
               <div>
                 <label className="block text-xs font-black uppercase text-gray-500 mb-2 tracking-widest flex items-center gap-2">
                     Subcategoría <Tag size={12}/>
@@ -298,7 +296,6 @@ export default function CrearProducto() {
             </div>
           </section>
 
-          {/* VARIANTES Y STOCK */}
           <section className="bg-white p-5 md:p-8 rounded-xl shadow-sm border-2 border-gray-300">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
               <h2 className="font-black uppercase text-sm text-[#c6a35a] tracking-widest">Inventario</h2>
@@ -339,7 +336,6 @@ export default function CrearProducto() {
             )}
           </section>
 
-          {/* SEO AVANZADO */}
           <section className="bg-white p-5 md:p-8 rounded-xl shadow-sm border-2 border-gray-300">
             <h2 className="font-black uppercase text-sm mb-6 text-[#c6a35a] tracking-widest flex items-center gap-2"><Globe size={20}/> SEO Avanzado</h2>
             <div className="space-y-6">
@@ -365,7 +361,6 @@ export default function CrearProducto() {
           </section>
         </div>
 
-        {/* COLUMNA DERECHA */}
         <div className="space-y-6">
           <section className="bg-white p-5 md:p-8 rounded-xl shadow-sm border-2 border-gray-300">
             <h2 className="font-black uppercase text-sm mb-6 text-gray-400 tracking-widest flex items-center justify-between font-bold italic">Galería <span className="bg-black text-white px-2 py-1 rounded text-[10px]">{previews.length}</span></h2>

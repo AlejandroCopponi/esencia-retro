@@ -2,19 +2,19 @@ import { NextResponse } from "next/server";
 
 export async function POST(req) {
   try {
-    const { nombre, categoria, tipo } = await req.json();
+    // 1. AHORA SÍ RECIBIMOS EL CONTEXTO Y EL TEXTO FIJO
+    const { nombre, categoria, tipo, contexto, texto_fijo } = await req.json();
     const apiKey = process.env.GEMINI_API_KEY; // O GOOGLE_API_KEY
 
     if (!apiKey) return NextResponse.json({ error: "Falta API KEY" }, { status: 500 });
 
     let prompt = "";
     
-    // CONFIGURACIÓN PARA QUE SEA CORTO
     if (tipo === 'description') {
-      prompt = `Sos un experto en marketing de fútbol retro. 
-      Escribí una descripción MUY BREVE (máximo 3 oraciones o 40 palabras) para la camiseta "${nombre}" (${categoria}).
-      Enfocate solo en la mística o el jugador.
-      NO hables de la tela ni calidad, solo de la emoción.`;
+      // 2. SI HAY CONTEXTO DE LA CATEGORÍA, LO USAMOS COMO INSTRUCCIÓN PRINCIPAL
+      prompt = contexto 
+        ? `${contexto}\n\nProducto: "${nombre}" (${categoria}). Generá una descripción MUY BREVE (máximo 3 oraciones o 40 palabras). NO hables de tela ni calidad, solo de la emoción/historia.`
+        : `Sos un experto en marketing de fútbol retro. Escribí una descripción MUY BREVE (máximo 3 oraciones o 40 palabras) para la camiseta "${nombre}" (${categoria}). Enfocate solo en la mística o el jugador. NO hables de la tela ni calidad, solo de la emoción.`;
     
     } else if (tipo === 'tags') {
       prompt = `Generá 10 etiquetas separadas por comas para: "${nombre}". Solo las palabras.`;
@@ -44,10 +44,15 @@ export async function POST(req) {
     if (data.candidates && data.candidates.length > 0) {
         let text = data.candidates[0].content.parts[0].text.trim();
         
-        // ACÁ OCURRE LA MAGIA: Si es descripción, le pegamos el texto fijo nosotros
+        // 3. ACÁ PEGAMOS EL TEXTO CORTO DEPENDIENDO DE LA CATEGORÍA
         if (tipo === 'description') {
-            const textoFijo = "\n\nCamiseta confeccionada en tela premium W15, diseñada para ofrecerte comodidad, resistencia y estilo en cada uso. Esta prenda exclusiva combina calidad y detalles que marcan la diferencia.";
-            text = text + textoFijo;
+            if (texto_fijo) {
+                // Si la categoría mandó su propio texto, lo usamos
+                text = text + "\n\n" + texto_fijo;
+            } else {
+                // Si no mandó nada (o todavía no lo configuraste), usamos el genérico de la W15 por las dudas
+                text = text + "\n\nCamiseta confeccionada en tela premium W15, diseñada para ofrecerte comodidad, resistencia y estilo en cada uso. Esta prenda exclusiva combina calidad y detalles que marcan la diferencia.";
+            }
         }
 
         return NextResponse.json({ resultado: text });

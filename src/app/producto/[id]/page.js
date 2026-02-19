@@ -16,6 +16,7 @@ export default function ProductPage() {
 
   const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
+  const [technicalText, setTechnicalText] = useState('');
   const [loading, setLoading] = useState(true);
   
   const [selectedSize, setSelectedSize] = useState(null);
@@ -36,6 +37,7 @@ export default function ProductPage() {
 
   async function fetchProduct() {
     try {
+      // 1. Buscamos el producto
       const { data: currentProduct, error } = await supabase
         .from('products')
         .select('*')
@@ -47,15 +49,38 @@ export default function ProductPage() {
       setCurrentImage(currentProduct.image_url);
 
       if (currentProduct) {
-        // CAMBIO 1: Traemos 10 productos para asegurar que el carrusel se llene
-        const { data: related } = await supabase
+        // 2. Traemos los productos relacionados (Misma categoría)
+        let { data: related } = await supabase
           .from('products')
           .select('*')
           .eq('category', currentProduct.category)
           .neq('id', currentProduct.id)
           .limit(10); 
         
+        // CORRECCIÓN: Si no hay de la misma categoría, traemos otros cualquiera para que no desaparezca
+        if (!related || related.length === 0) {
+            const { data: fallbackRelated } = await supabase
+                .from('products')
+                .select('*')
+                .neq('id', currentProduct.id)
+                .limit(10);
+            related = fallbackRelated;
+        }
+        
         setRelatedProducts(related || []);
+
+        // 3. Traemos el texto técnico (Footer) de la categoría
+        if (currentProduct.category) {
+            const { data: catData } = await supabase
+                .from('categories')
+                .select('technical_text')
+                .eq('name', currentProduct.category)
+                .single();
+            
+            if (catData && catData.technical_text) {
+                setTechnicalText(catData.technical_text);
+            }
+        }
       }
     } catch (error) {
       console.error('Error:', error);
@@ -116,7 +141,7 @@ export default function ProductPage() {
             <ArrowLeft size={16} /> Volver al Catálogo
         </Link>
 
-        <div className="grid md:grid-cols-2 gap-12 lg:gap-20 mb-20 items-start">
+        <div className="grid md:grid-cols-2 gap-12 lg:gap-20 mb-12 items-start">
             
             {/* GALERÍA */}
             <div className="flex flex-col gap-4">
@@ -240,27 +265,25 @@ export default function ProductPage() {
             </div>
         </div>
         
-        {/* CAMBIO 2: CARRUSEL HORIZONTAL FORZADO */}
+        {/* CARRUSEL HORIZONTAL MÁS PEQUEÑO Y COMPACTO */}
         {relatedProducts.length > 0 && (
-            <div className="border-t border-[#0f0f10]/10 pt-16 mb-20">
-                <h2 className="text-xl font-black uppercase mb-8 tracking-tighter">También te puede interesar</h2>
+            <div className="border-t border-[#0f0f10]/10 pt-10 mb-10">
+                <h2 className="text-lg font-black uppercase mb-4 tracking-tighter">También te puede interesar</h2>
                 
-                {/* flex-nowrap: obliga a estar en una linea. overflow-x-auto: activa el scroll */}
                 <div 
-                    className="flex flex-nowrap overflow-x-auto gap-4 pb-8 px-1 snap-x snap-mandatory" 
+                    className="flex flex-nowrap overflow-x-auto gap-3 pb-4 px-1 snap-x snap-mandatory" 
                     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 >
                     {relatedProducts.map((rel) => {
                          const relPrice = Number(rel.price || 0);
                         return (
                         <Link key={rel.id} href={`/producto/${rel.id}`} 
-                            /* CAMBIO 3: flex-none y w-48 (ancho fijo) para que no se achiquen */
-                            className="flex-none w-44 md:w-56 snap-start group block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-transparent hover:border-[#c6a35a] relative"
+                            className="flex-none w-36 md:w-40 snap-start group block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-transparent hover:border-[#c6a35a] relative"
                         >
-                            <img src={rel.image_url} alt={rel.name} className="w-full h-36 md:h-48 object-contain mix-blend-multiply p-6 scale-90" />
+                            <img src={rel.image_url} alt={rel.name} className="w-full h-28 md:h-32 object-contain mix-blend-multiply p-3 scale-90 group-hover:scale-100 transition-transform" />
                             <div className="p-3 border-t border-gray-100">
                                 <h3 className="font-black text-[#0f0f10] text-[10px] uppercase truncate group-hover:text-[#c6a35a] transition-colors">{rel.name}</h3>
-                                <p className="font-bold text-[#0f0f10] text-xs">${relPrice.toLocaleString('es-AR')}</p>
+                                <p className="font-bold text-[#0f0f10] text-sm">${relPrice.toLocaleString('es-AR')}</p>
                             </div>
                         </Link>
                     )})}
@@ -268,26 +291,14 @@ export default function ProductPage() {
             </div>
         )}
 
-        {/* TEXTO FIJO ABAJO DEL TODO */}
-        <div className="max-w-3xl mx-auto border-t border-[#0f0f10]/10 pt-16 text-sm leading-relaxed text-[#0f0f10]/80">
-            <h3 className="font-black uppercase tracking-widest mb-6 text-xs text-[#0f0f10]">Características destacadas:</h3>
-            <p className="mb-2">⭐ Estampado en vinilo premium que garantiza durabilidad y un acabado impecable.</p>
-            <p className="mb-2">🪡 Escudo y marca bordados, aportando un toque auténtico y elegante.</p>
-            <p className="mb-2">🛡️ Cuello reforzado para mayor resistencia y comodidad.</p>
-            <p className="mb-6">✂️ Tiras cocidas, que aseguran una mayor vida útil de la camiseta.</p>
-
-            <p className="font-bold mb-10 text-[#0f0f10]">Esta camiseta es la elección perfecta para quienes valoran la calidad, el confort y el estilo en una sola prenda.</p>
-
-            <h3 className="font-black uppercase tracking-widest mb-6 text-xs text-[#0f0f10]">Consejos para lavar tu camiseta:</h3>
-            <ul className="list-disc pl-5 space-y-2">
-                <li>Voltea tu camiseta para mayor seguridad.</li>
-                <li>Lavar a mano usando agua fria.</li>
-                <li>Evitar remojar la prenda por más de una hora.</li>
-                <li>Uso moderado de detergentes (evitar suavizantes).</li>
-                <li>Secar a la sombra, colgada en una percha.</li>
-                <li>Evitar secadora y plancha electrica.</li>
-            </ul>
-        </div>
+        {/* TEXTO FIJO (FOOTER TÉCNICO) DINÁMICO DESDE LA BASE DE DATOS */}
+        {technicalText && (
+            <div className="max-w-3xl mx-auto border-t border-[#0f0f10]/10 pt-10 text-sm leading-relaxed text-[#0f0f10]/80">
+                <div className="whitespace-pre-line">
+                    {technicalText}
+                </div>
+            </div>
+        )}
 
       </div>
     </div>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Save, Trash2, Pencil, Layers, Info, FileText, Tag } from 'lucide-react';
+import { Save, Trash2, Pencil, Layers, Info, FileText, Tag, AlignLeft } from 'lucide-react'; // Agregué AlignLeft para el ícono
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState([]);
@@ -11,8 +11,9 @@ export default function CategoriesPage() {
   const [formData, setFormData] = useState({
     id: null,
     name: '',
-    subcategories: '', // NUEVO CAMPO (Texto separado por comas)
+    subcategories: '', 
     ai_context: '',
+    short_text: '', // NUEVO CAMPO
     technical_text: ''
   });
 
@@ -39,8 +40,9 @@ export default function CategoriesPage() {
 
     const categoryData = {
       name: formData.name,
-      subcategories: subcatsArray, // Guardamos el array
+      subcategories: subcatsArray,
       ai_context: formData.ai_context,
+      short_text: formData.short_text, // GUARDAMOS EL NUEVO CAMPO
       technical_text: formData.technical_text
     };
 
@@ -71,15 +73,15 @@ export default function CategoriesPage() {
     setFormData({
       id: cat.id,
       name: cat.name,
-      // Convertimos el Array de vuelta a Texto para editarlo fácil
       subcategories: cat.subcategories ? cat.subcategories.join(', ') : '',
       ai_context: cat.ai_context || '',
+      short_text: cat.short_text || '', // CARGAMOS EL NUEVO CAMPO
       technical_text: cat.technical_text || ''
     });
   }
 
   function resetForm() {
-    setFormData({ id: null, name: '', subcategories: '', ai_context: '', technical_text: '' });
+    setFormData({ id: null, name: '', subcategories: '', ai_context: '', short_text: '', technical_text: '' });
   }
 
   return (
@@ -120,7 +122,7 @@ export default function CategoriesPage() {
                         />
                     </div>
 
-                    {/* SUBCATEGORÍAS (NUEVO) */}
+                    {/* SUBCATEGORÍAS */}
                     <div>
                         <label className="block text-base font-black uppercase text-gray-800 mb-3 flex justify-between items-center">
                             Subcategorías
@@ -148,6 +150,21 @@ export default function CategoriesPage() {
                             placeholder="Instrucción para la descripción..."
                             value={formData.ai_context}
                             onChange={e => setFormData({...formData, ai_context: e.target.value})}
+                        />
+                    </div>
+
+                    {/* TEXTO CORTO (PEGADITO A LA IA) */}
+                    <div>
+                        <label className="block text-base font-black uppercase text-gray-800 mb-3 flex justify-between items-center">
+                            Texto Corto (Bajo IA)
+                            <AlignLeft size={20} className="text-purple-500" />
+                        </label>
+                        <textarea 
+                            rows="3"
+                            className="w-full p-4 border-2 border-gray-300 rounded-xl text-base leading-relaxed outline-none focus:border-[#c6a35a] text-gray-700"
+                            placeholder="Texto fijo que va pegado abajo de la descripción generada..."
+                            value={formData.short_text}
+                            onChange={e => setFormData({...formData, short_text: e.target.value})}
                         />
                     </div>
 
