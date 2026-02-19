@@ -4,13 +4,15 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Truck, ShieldCheck, Check, ShoppingBag, CreditCard, Minus, Plus } from 'lucide-react';
+import { ArrowLeft, Truck, ShieldCheck, Check, ShoppingBag, CreditCard, Minus, Plus, Heart } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+import { useFavorites } from '@/context/FavoritesContext';
 
 export default function ProductPage() {
   const params = useParams();
   const { id } = params;
   const { addToCart } = useCart();
+  const { toggleFavorite, isFavorite } = useFavorites();
 
   const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
@@ -105,6 +107,8 @@ export default function ProductPage() {
     product.image_url5
   ].filter(Boolean);
 
+  const isFav = isFavorite(product.id);
+
   return (
     <div className="min-h-screen font-sans pt-28 pb-12 px-4 md:px-8" style={{ background: COLORS.gradient, color: COLORS.ink }}>
       <div className="max-w-6xl mx-auto">
@@ -150,9 +154,24 @@ export default function ProductPage() {
                     {product.category || 'Retro Football'}
                 </span>
                 
-                <h1 className="text-3xl md:text-4xl font-black uppercase leading-[0.9] tracking-tighter mb-4 text-[#0f0f10]">
-                    {product.name}
-                </h1>
+                {/* CONTENEDOR TÍTULO + CORAZÓN */}
+                <div className="flex justify-between items-start gap-4 mb-4">
+                    <h1 className="text-3xl md:text-4xl font-black uppercase leading-[0.9] tracking-tighter text-[#0f0f10]">
+                        {product.name}
+                    </h1>
+                    
+                    <button 
+                        onClick={() => toggleFavorite(product)}
+                        title={isFav ? "Quitar de favoritos" : "Agregar a favoritos"}
+                        className={`p-3 rounded-full border transition-all flex-shrink-0 shadow-sm
+                            ${isFav 
+                                ? 'bg-red-50 border-red-200 text-red-500' 
+                                : 'bg-white/50 border-[#0f0f10]/10 text-[#0f0f10]/40 hover:text-red-500 hover:border-red-200 hover:bg-red-50'
+                            }`}
+                    >
+                        <Heart size={24} className={isFav ? 'fill-current' : ''} />
+                    </button>
+                </div>
                 
                 <div className="mb-6">
                     {hasDiscount && (

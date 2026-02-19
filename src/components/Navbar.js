@@ -2,17 +2,19 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ShoppingCart, Menu, X, Search, User, ChevronDown } from "lucide-react";
+import { ShoppingCart, Menu, X, Search, User, ChevronDown, Heart } from "lucide-react"; // Agregado Heart
 import { useCart } from "@/context/CartContext";
-import { useRouter, usePathname } from "next/navigation"; // 1. Agregamos usePathname
+import { useFavorites } from "@/context/FavoritesContext"; // Agregada la memoria de Favoritos
+import { useRouter, usePathname } from "next/navigation"; 
 
 export default function Navbar() {
   const { cart } = useCart();
+  const { favorites, isMounted } = useFavorites(); // Traemos los favoritos
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isFixed, setIsFixed] = useState(false);
   const router = useRouter();
-  const pathname = usePathname(); // 2. Leemos la ruta
+  const pathname = usePathname(); 
 
   // --- HOOKS (ESTO NO SE TOCA Y DEBE ESTAR ARRIBA) ---
   useEffect(() => {
@@ -32,7 +34,6 @@ export default function Navbar() {
   };
 
   // --- LÓGICA DE OCULTAMIENTO (AHORA SÍ, EN EL LUGAR CORRECTO) ---
-  // Recién ahora, que ya cargaron los hooks, preguntamos si hay que ocultar.
   if (pathname && (pathname.startsWith('/admin') || pathname.startsWith('/checkout'))) {
     return null;
   }
@@ -96,8 +97,19 @@ export default function Navbar() {
                 </div>
 
                 {/* ICONOS */}
-                <div className="flex items-center gap-6 text-retro-ink">
+                <div className="flex items-center gap-4 md:gap-6 text-retro-ink">
                     <Link href="/admin" className="hidden md:block hover:text-retro-gold transition-colors"><User size={26} /></Link>
+                    
+                    {/* --- NUEVO: ICONO DE FAVORITOS --- */}
+                    <Link href="/favoritos" className="relative group hover:text-retro-gold transition-colors">
+                        <Heart size={26} />
+                        {isMounted && favorites.length > 0 && (
+                            <span className="absolute -top-1.5 -right-1.5 bg-retro-ink text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full">
+                                {favorites.length}
+                            </span>
+                        )}
+                    </Link>
+
                     <Link href="/carrito" className="relative group hover:text-retro-gold transition-colors">
                         <ShoppingCart size={26} />
                         {cart.length > 0 && (
@@ -169,6 +181,16 @@ export default function Navbar() {
              </div>
              
              <Link href="/" onClick={() => setIsOpen(false)} className="text-2xl font-black uppercase text-retro-ink border-b border-retro-line pb-3">Inicio</Link>
+             
+             {/* --- NUEVO: FAVORITOS EN MENÚ MÓVIL --- */}
+             <Link href="/favoritos" onClick={() => setIsOpen(false)} className="flex justify-between items-center text-2xl font-black uppercase text-retro-ink border-b border-retro-line pb-3">
+                Favoritos
+                {isMounted && favorites.length > 0 && (
+                    <span className="bg-retro-ink text-white text-sm w-7 h-7 flex items-center justify-center rounded-full">
+                        {favorites.length}
+                    </span>
+                )}
+             </Link>
              
              <div className="flex flex-col gap-4 border-b border-retro-line pb-4">
                 <span className="text-2xl font-black uppercase text-retro-ink opacity-50">Colección</span>
